@@ -124,7 +124,7 @@ export function ClientTabs({ client, affiliates, canCredit }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <WithdrawModal clientId={client.id} canWithdraw={canCredit} />
+          <WithdrawModal clientId={client.id} walletBalance={client.wallet_balance} canWithdraw={canCredit} />
           <CreditModal clientId={client.id} cryptoFeeRate={parseFloat(client.crypto_fee_rate)} canCredit={canCredit} />
           <EditClientModal client={client} affiliates={affiliates} />
         </div>
