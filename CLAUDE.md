@@ -357,3 +357,4 @@ reward-agency-dashboard/
 - **Tests**: integration tests hit the running dev server at `http://localhost:3000`; use `next-auth/jwt` `encode()` with `salt = "authjs.session-token"` for test tokens
 - **No CSS custom properties** on HTML elements — use Tailwind arbitrary values (`bg-[hsl(...)]`) to avoid unstyled flash on navigation
 - **No `loading.tsx` files** — they cause grey flash during navigation
+- **Always manually check for duplicate headings, buttons, or UI elements after building new pages** — page server components own the header (title + action button); table/tab client components must not repeat them

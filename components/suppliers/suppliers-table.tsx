@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AddSupplierModal } from "./add-supplier-modal";
 
 interface Supplier {
   id: string;
@@ -56,11 +55,6 @@ export function SuppliersTable({ suppliers, isAdmin }: Props) {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Suppliers</h1>
-        {isAdmin && <AddSupplierModal />}
-      </div>
-
       <div className="mb-4 max-w-sm">
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
