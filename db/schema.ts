@@ -70,19 +70,32 @@ export const suppliers = pgTable("suppliers", {
   created_at: timestamp("created_at").notNull().default(now()),
 });
 
+// ─── supplier_sub_accounts ────────────────────────────────────────────────────
+export const supplier_sub_accounts = pgTable("supplier_sub_accounts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplier_id: uuid("supplier_id")
+    .notNull()
+    .references(() => suppliers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("active"), // active|inactive
+  created_at: timestamp("created_at").notNull().default(now()),
+});
+
 // ─── supplier_platform_fees ───────────────────────────────────────────────────
 export const supplier_platform_fees = pgTable(
   "supplier_platform_fees",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     supplier_id: uuid("supplier_id")
+      .references(() => suppliers.id, { onDelete: "cascade" }), // nullable — denormalized from sub-account
+    supplier_sub_account_id: uuid("supplier_sub_account_id")
       .notNull()
-      .references(() => suppliers.id, { onDelete: "cascade" }),
+      .references(() => supplier_sub_accounts.id, { onDelete: "cascade" }),
     platform: text("platform").notNull(), // meta|google|tiktok|snapchat|pinterest
     fee_rate: numeric("fee_rate", { precision: 5, scale: 2 }).notNull(),
   },
   (t) => ({
-    uniq_supplier_platform: unique("uniq_supplier_platform").on(t.supplier_id, t.platform),
+    uniq_sub_account_platform: unique("uniq_sub_account_platform").on(t.supplier_sub_account_id, t.platform),
   })
 );
 
@@ -95,6 +108,8 @@ export const ad_accounts = pgTable("ad_accounts", {
   supplier_id: uuid("supplier_id")
     .notNull()
     .references(() => suppliers.id, { onDelete: "restrict" }),
+  supplier_sub_account_id: uuid("supplier_sub_account_id")
+    .references(() => supplier_sub_accounts.id, { onDelete: "set null" }),
   platform: text("platform").notNull(), // meta|google|tiktok|snapchat|pinterest
   account_id: text("account_id").notNull(),
   account_name: text("account_name").notNull(),
