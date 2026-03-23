@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { X, Plus } from "lucide-react";
 
 type PlatformFees = { meta?: number; google?: number; tiktok?: number; snapchat?: number; pinterest?: number };
@@ -57,25 +58,41 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
   const selectedSupplier = suppliers.find((s) => s.id === supplierId);
   const subAccounts = selectedSupplier?.sub_accounts ?? [];
 
-  // Reset sub-account when supplier changes
+  // Platforms available for selected sub-account (fee_rate > 0 only)
+  const selectedSubAccount = subAccounts.find((sa) => sa.id === subAccountId);
+  const availablePlatforms = useMemo(() => {
+    if (!subAccountId || !selectedSubAccount) return PLATFORMS;
+    return PLATFORMS.filter(
+      (p) => (selectedSubAccount.platform_fees?.[p] ?? 0) > 0
+    );
+  }, [subAccountId, selectedSubAccount]);
+  const hasNoFees = subAccountId && availablePlatforms.length === 0;
+
+  // Reset sub-account + platform when supplier changes
   useEffect(() => {
     setSubAccountId("");
+    setPlatform("");
     setFeeRate("");
   }, [supplierId]);
+
+  // Reset platform + fee when sub-account changes
+  useEffect(() => {
+    setPlatform("");
+    setFeeRate("");
+  }, [subAccountId]);
 
   // Auto-suggest fee rate from sub-account's platform fees
   useEffect(() => {
     if (!subAccountId || !platform) return;
-    const subAccount = subAccounts.find((sa) => sa.id === subAccountId);
-    const suggested = subAccount?.platform_fees?.[platform as keyof PlatformFees];
-    if (suggested !== undefined) { setFeeRate(String(suggested)); return; }
+    const suggested = selectedSubAccount?.platform_fees?.[platform as keyof PlatformFees];
+    if (suggested !== undefined && suggested > 0) { setFeeRate(String(suggested)); return; }
     // Fallback: try client platform fees
     if (clientId) {
       const client = clients.find((c) => c.id === clientId);
       const clientSuggested = client?.client_platform_fees?.[platform as keyof PlatformFees];
       if (clientSuggested !== undefined) setFeeRate(String(clientSuggested));
     }
-  }, [subAccountId, platform, subAccounts, clientId, clients]);
+  }, [subAccountId, platform, selectedSubAccount, clientId, clients]);
 
   function reset() {
     setClientId(prefillClientId ?? "");
@@ -174,12 +191,22 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
 
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Platform *</label>
-                  <select required value={platform} onChange={(e) => setPlatform(e.target.value)} className={inputCls}>
-                    <option value="">Select platform…</option>
-                    {PLATFORMS.map((p) => (
-                      <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>
-                    ))}
-                  </select>
+                  {hasNoFees ? (
+                    <p className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                      This sub-account has no platform fees configured. Please set up fees in the{" "}
+                      <Link href="/suppliers" className="underline font-medium hover:text-amber-900">
+                        Suppliers section
+                      </Link>{" "}
+                      first.
+                    </p>
+                  ) : (
+                    <select required value={platform} onChange={(e) => setPlatform(e.target.value)} className={inputCls} disabled={!subAccountId}>
+                      <option value="">Select platform…</option>
+                      {availablePlatforms.map((p) => (
+                        <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
