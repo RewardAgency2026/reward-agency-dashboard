@@ -44,8 +44,8 @@ const PLATFORM_BADGE: Record<string, string> = {
 };
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  paused: "bg-amber-50 text-amber-700 border border-amber-200",
-  closed: "bg-gray-100 text-gray-500",
+  disabled: "bg-amber-50 text-amber-700 border border-amber-200",
+  deleted: "bg-red-50 text-red-600 border border-red-200",
 };
 
 export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
@@ -83,8 +83,8 @@ export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls}>
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="closed">Closed</option>
+          <option value="disabled">Disabled</option>
+          <option value="deleted">Deleted</option>
         </select>
       </div>
 

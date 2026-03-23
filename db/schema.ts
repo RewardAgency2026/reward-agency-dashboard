@@ -114,7 +114,7 @@ export const ad_accounts = pgTable("ad_accounts", {
   account_id: text("account_id").notNull(),
   account_name: text("account_name").notNull(),
   top_up_fee_rate: numeric("top_up_fee_rate", { precision: 5, scale: 2 }).notNull(),
-  status: text("status").notNull().default("active"), // active|paused|closed
+  status: text("status").notNull().default("active"), // active|disabled|deleted
   created_at: timestamp("created_at").notNull().default(now()),
 });
 

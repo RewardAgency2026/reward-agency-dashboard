@@ -11,7 +11,7 @@ const patchSchema = z.object({
   account_name: z.string().min(1).optional(),
   supplier_sub_account_id: z.string().uuid().optional(),
   top_up_fee_rate: z.number().min(0).max(100).optional(),
-  status: z.enum(["active", "paused", "closed"]).optional(),
+  status: z.enum(["active", "disabled", "deleted"]).optional(),
 });
 
 export async function GET(

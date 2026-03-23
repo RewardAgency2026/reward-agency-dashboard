@@ -147,8 +147,8 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                   <select value={form.status} onChange={(e) => set("status", e.target.value)} className={inputCls}>
                     <option value="active">Active</option>
-                    <option value="paused">Paused</option>
-                    <option value="closed">Closed</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="deleted">Deleted</option>
                   </select>
                 </div>
               </div>

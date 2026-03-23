@@ -115,6 +115,12 @@ const STATUS_BADGE: Record<string, string> = {
   closed: "bg-gray-100 text-gray-500",
 };
 
+const AD_ACCOUNT_STATUS_BADGE: Record<string, string> = {
+  active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  disabled: "bg-amber-50 text-amber-700 border border-amber-200",
+  deleted: "bg-red-50 text-red-600 border border-red-200",
+};
+
 const PLATFORM_LABELS: Record<keyof PlatformFees, string> = {
   meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
 };
@@ -316,7 +322,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
                       </td>
                       <td className="px-4 py-3 font-mono text-sm">{parseFloat(a.top_up_fee_rate)}%</td>
                       <td className="px-4 py-3">
-                        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", STATUS_BADGE[a.status] ?? "bg-gray-100 text-gray-500")}>
+                        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", AD_ACCOUNT_STATUS_BADGE[a.status] ?? "bg-gray-100 text-gray-500")}>
                           {a.status}
                         </span>
                       </td>
