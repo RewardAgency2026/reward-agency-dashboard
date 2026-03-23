@@ -186,8 +186,8 @@ To be added in Sprint 4.
 | Sprint 2 | ✅ Done | Agency sidebar (dark navy), all nav items, route groups (agency/client/affiliate), placeholder pages |
 | Sprint 3 | ✅ Done | Clients CRUD, wallet balance, credit/withdraw/refund, platform fees, setup config, notes, 22/22 tests |
 | Sprint 4 | ✅ Done | Suppliers + Ad Accounts module (sub-account hierarchy, 21/21 tests) |
-| Sprint 5 | 🔄 Next | Top-Up Requests (client requests → agency executes) |
-| Sprint 6 | ⏳ | Transactions (full ledger view, filters) |
+| Sprint 5 | ✅ Done | Top-Up Requests (client requests → agency executes, 16/16 tests) |
+| Sprint 6 | 🔄 Next | Transactions (full ledger view, filters) |
 | Sprint 7 | ⏳ | Affiliates module (commissions, referrals) |
 | Sprint 8 | ⏳ | P&L + Invoices |
 | Sprint 9 | ⏳ | Client portal (balance, ad accounts, transactions, top-up requests) |
