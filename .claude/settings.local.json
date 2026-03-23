@@ -9,7 +9,11 @@
       "Bash(npm install:*)",
       "Bash(openssl rand:*)",
       "Bash(node:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -9,8 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        sidebar: {
+          bg: "hsl(222, 47%, 11%)",
+          active: "hsl(236, 85%, 55%)",
+          hover: "hsl(222, 47%, 16%)",
+          text: "hsl(215, 20%, 65%)",
+          border: "hsl(222, 47%, 17%)",
+        },
+      },
+      width: {
+        sidebar: "240px",
       },
     },
   },
