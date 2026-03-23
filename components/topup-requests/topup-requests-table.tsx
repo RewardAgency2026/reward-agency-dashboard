@@ -72,16 +72,27 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function TopupRequestsTable({ requests, isAdmin, hideClientColumn }: Props) {
+export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideClientColumn }: Props) {
   const router = useRouter();
+  const [requests, setRequests] = useState(initialRequests);
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectLoading, setRejectLoading] = useState(false);
+
+  // Sync with server data after background router.refresh()
+  React.useEffect(() => {
+    setRequests(initialRequests);
+  }, [initialRequests]);
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const insufficientCount = requests.filter((r) => r.status === "insufficient_funds").length;
 
   const filtered = statusFilter ? requests.filter((r) => r.status === statusFilter) : requests;
+
+  function handleExecuted(id: string) {
+    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "executed", executed_at: new Date().toISOString() } : r));
+    router.refresh();
+  }
 
   async function handleReject(id: string) {
     setRejectLoading(true);
@@ -92,6 +103,7 @@ export function TopupRequestsTable({ requests, isAdmin, hideClientColumn }: Prop
         body: JSON.stringify({}),
       });
       setRejectingId(null);
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" } : r));
       router.refresh();
     } finally {
       setRejectLoading(false);
@@ -193,7 +205,7 @@ export function TopupRequestsTable({ requests, isAdmin, hideClientColumn }: Prop
                       <td className="px-4 py-3">
                         {canAct && (
                           <div className="flex items-center gap-1.5">
-                            <ExecuteModal request={r} onSuccess={() => router.refresh()} />
+                            <ExecuteModal request={r} onSuccess={handleExecuted} />
                             {rejectingId === r.id ? (
                               <div className="flex items-center gap-1">
                                 <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { AddClientModal } from "./add-client-modal";
@@ -50,9 +50,19 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function ClientsTable({ clients, affiliates, isAdmin }: Props) {
+export function ClientsTable({ clients: initialClients, affiliates, isAdmin }: Props) {
+  const [clients, setClients] = useState(initialClients);
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<typeof STATUS_TABS[number]>("all");
+
+  // Sync with server data after background router.refresh()
+  useEffect(() => {
+    setClients(initialClients);
+  }, [initialClients]);
+
+  function handleClientCreated(newClient: Client) {
+    setClients((prev) => [newClient, ...prev]);
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -72,7 +82,7 @@ export function ClientsTable({ clients, affiliates, isAdmin }: Props) {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        {isAdmin && <AddClientModal affiliates={affiliates} />}
+        {isAdmin && <AddClientModal affiliates={affiliates} onSuccess={handleClientCreated} />}
       </div>
 
       {/* Search */}

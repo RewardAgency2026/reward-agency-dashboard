@@ -132,8 +132,7 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
         {label ?? "New Top-Up"}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className={open ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" : "hidden"}>
           <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
             <div className="border-b border-gray-100 px-6 py-4">
               <h2 className="text-base font-semibold text-gray-900">New Top-Up</h2>
@@ -307,8 +306,7 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </div>
     </>
   );
 }

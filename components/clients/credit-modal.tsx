@@ -7,7 +7,7 @@ import { X, DollarSign } from "lucide-react";
 interface Props {
   clientId: string;
   cryptoFeeRate: number;
-  canCredit: boolean; // admin or team only
+  canCredit: boolean;
 }
 
 type Currency = "USD" | "USDT" | "USDC" | "EUR";
@@ -37,6 +37,11 @@ export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
     setSuccess(null);
   }
 
+  function handleClose() {
+    setOpen(false);
+    reset();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!grossAmount || grossAmount <= 0) {
@@ -59,8 +64,7 @@ export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
       }
       setSuccess(`Wallet credited: ${net.toFixed(2)} ${currency}`);
       setTimeout(() => {
-        setOpen(false);
-        reset();
+        handleClose();
         router.refresh();
       }, 1200);
     } catch {
@@ -82,90 +86,88 @@ export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
         Credit Balance
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative w-full max-w-md mx-4 bg-white rounded-lg shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="text-base font-semibold text-gray-900">Credit Balance</h2>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
+      <div className={open ? "fixed inset-0 z-50 flex items-center justify-center" : "hidden"}>
+        <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="relative w-full max-w-md mx-4 bg-white rounded-lg shadow-xl">
+          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+            <h2 className="text-base font-semibold text-gray-900">Credit Balance</h2>
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+              <X size={18} />
+            </button>
+          </div>
 
-            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Amount</label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value as Currency)}
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="USDT">USDT</option>
-                    <option value="USDC">USDC</option>
-                  </select>
-                </div>
-              </div>
-
+          <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Amount</label>
                 <input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional note"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
                   className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
-              {isCrypto && grossAmount > 0 && (
-                <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
-                  <p className="font-medium text-amber-800">Crypto fee preview</p>
-                  <p className="text-amber-700 mt-1">
-                    Fee ({cryptoFeeRate}%): <span className="font-mono">−${fee.toFixed(2)}</span>
-                    <span className="mx-2 text-amber-400">→</span>
-                    Net credited: <span className="font-mono font-semibold">${net.toFixed(2)} {currency}</span>
-                  </p>
-                </div>
-              )}
-
-              {error && (
-                <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>
-              )}
-              {success && (
-                <p className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">{success}</p>
-              )}
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setOpen(false)}
-                  className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
-                  {loading ? "Processing…" : "Confirm Credit"}
-                </button>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as Currency)}
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USDT">USDT</option>
+                  <option value="USDC">USDC</option>
+                </select>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional note"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {isCrypto && grossAmount > 0 && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
+                <p className="font-medium text-amber-800">Crypto fee preview</p>
+                <p className="text-amber-700 mt-1">
+                  Fee ({cryptoFeeRate}%): <span className="font-mono">−${fee.toFixed(2)}</span>
+                  <span className="mx-2 text-amber-400">→</span>
+                  Net credited: <span className="font-mono font-semibold">${net.toFixed(2)} {currency}</span>
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>
+            )}
+            {success && (
+              <p className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">{success}</p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={handleClose}
+                className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" disabled={loading}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+                {loading ? "Processing…" : "Confirm Credit"}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
     </>
   );
 }

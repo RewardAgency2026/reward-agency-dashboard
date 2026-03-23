@@ -21,7 +21,7 @@ interface TopupRequest {
 
 interface Props {
   request: TopupRequest;
-  onSuccess: () => void;
+  onSuccess: (id: string) => void;
 }
 
 export function ExecuteModal({ request, onSuccess }: Props) {
@@ -38,6 +38,11 @@ export function ExecuteModal({ request, onSuccess }: Props) {
   const isForce = request.status === "insufficient_funds";
   const insufficient = request.wallet_balance < amount;
 
+  function handleClose() {
+    setOpen(false);
+    setError("");
+  }
+
   async function handleExecute() {
     setLoading(true);
     setError("");
@@ -52,7 +57,7 @@ export function ExecuteModal({ request, onSuccess }: Props) {
         setError(data.error ?? "Execution failed");
       } else {
         setOpen(false);
-        onSuccess();
+        onSuccess(request.id);
       }
     } catch {
       setError("Network error");
@@ -75,95 +80,93 @@ export function ExecuteModal({ request, onSuccess }: Props) {
         {isForce ? "Execute Anyway" : "Execute"}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="border-b border-gray-100 px-6 py-4">
-              <h2 className="text-base font-semibold text-gray-900">Confirm Execution</h2>
+      <div className={open ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" : "hidden"}>
+        <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+          <div className="border-b border-gray-100 px-6 py-4">
+            <h2 className="text-base font-semibold text-gray-900">Confirm Execution</h2>
+          </div>
+
+          <div className="px-6 py-4 space-y-4">
+            {/* Summary */}
+            <div className="rounded-lg bg-gray-50 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Client</span>
+                <span className="font-medium text-gray-900">{request.client_name} <span className="text-gray-400 font-mono text-xs">({request.client_code})</span></span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Ad Account</span>
+                <span className="font-medium text-gray-900 capitalize">{request.ad_account_platform} — {request.ad_account_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-mono font-semibold text-gray-900">{amount.toFixed(2)} {request.currency}</span>
+              </div>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
-              {/* Summary */}
-              <div className="rounded-lg bg-gray-50 p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Client</span>
-                  <span className="font-medium text-gray-900">{request.client_name} <span className="text-gray-400 font-mono text-xs">({request.client_code})</span></span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Ad Account</span>
-                  <span className="font-medium text-gray-900 capitalize">{request.ad_account_platform} — {request.ad_account_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Amount</span>
-                  <span className="font-mono font-semibold text-gray-900">{amount.toFixed(2)} {request.currency}</span>
-                </div>
+            {/* Fee preview */}
+            <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">
+                  Supplier fee ({supplierFeeRate}%)
+                  {request.supplier_name && <span className="ml-1 text-gray-400">— {request.supplier_name}{request.sub_account_name ? ` ${request.sub_account_name}` : ""}</span>}
+                </span>
+                <span className="font-mono text-gray-700">{supplierFeeAmount.toFixed(2)} {request.currency}</span>
               </div>
-
-              {/* Fee preview */}
-              <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">
-                    Supplier fee ({supplierFeeRate}%)
-                    {request.supplier_name && <span className="ml-1 text-gray-400">— {request.supplier_name}{request.sub_account_name ? ` ${request.sub_account_name}` : ""}</span>}
-                  </span>
-                  <span className="font-mono text-gray-700">{supplierFeeAmount.toFixed(2)} {request.currency}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Your commission ({topUpFeeRate}%)</span>
-                  <span className="font-mono text-gray-700">{topUpFeeAmount.toFixed(2)} {request.currency}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Your commission ({topUpFeeRate}%)</span>
+                <span className="font-mono text-gray-700">{topUpFeeAmount.toFixed(2)} {request.currency}</span>
               </div>
+            </div>
 
-              {/* Balance */}
-              <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Current balance</span>
-                  <span className={cn("font-mono font-medium", insufficient ? "text-red-500" : "text-gray-700")}>
-                    {request.wallet_balance.toFixed(2)} {request.currency}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Balance after</span>
-                  <span className={cn("font-mono font-semibold", balanceAfter >= 0 ? "text-emerald-600" : "text-red-500")}>
-                    {balanceAfter.toFixed(2)} {request.currency}
-                  </span>
-                </div>
+            {/* Balance */}
+            <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Current balance</span>
+                <span className={cn("font-mono font-medium", insufficient ? "text-red-500" : "text-gray-700")}>
+                  {request.wallet_balance.toFixed(2)} {request.currency}
+                </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Balance after</span>
+                <span className={cn("font-mono font-semibold", balanceAfter >= 0 ? "text-emerald-600" : "text-red-500")}>
+                  {balanceAfter.toFixed(2)} {request.currency}
+                </span>
+              </div>
+            </div>
 
-              {isForce && (
-                <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
-                  Warning: wallet balance is insufficient. This execution will result in a negative balance.
-                </div>
+            {isForce && (
+              <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
+                Warning: wallet balance is insufficient. This execution will result in a negative balance.
+              </div>
+            )}
+
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
+          </div>
+
+          <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+            <button
+              onClick={handleClose}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleExecute}
+              disabled={loading}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50",
+                isForce
+                  ? "bg-orange-500 hover:bg-orange-600"
+                  : "bg-emerald-600 hover:bg-emerald-700"
               )}
-
-              {error && (
-                <p className="text-sm text-red-600">{error}</p>
-              )}
-            </div>
-
-            <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
-              <button
-                onClick={() => setOpen(false)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExecute}
-                disabled={loading}
-                className={cn(
-                  "rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50",
-                  isForce
-                    ? "bg-orange-500 hover:bg-orange-600"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                )}
-              >
-                {loading ? "Executing…" : "Confirm Execute"}
-              </button>
-            </div>
+            >
+              {loading ? "Executing…" : "Confirm Execute"}
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </>
   );
 }

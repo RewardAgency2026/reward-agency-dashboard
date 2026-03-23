@@ -53,6 +53,19 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  function handleClose() {
+    setOpen(false);
+    setForm({
+      platform: adAccount.platform,
+      account_id: adAccount.account_id,
+      account_name: adAccount.account_name,
+      supplier_id: adAccount.supplier_id,
+      supplier_sub_account_id: adAccount.supplier_sub_account_id ?? "",
+      status: adAccount.status,
+    });
+    setError(null);
+  }
+
   // Sub-accounts filtered by selected supplier
   const selectedSupplier = suppliers.find((s) => s.id === form.supplier_id);
   const subAccounts = selectedSupplier?.sub_accounts ?? [];
@@ -106,13 +119,12 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
         Edit
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+      <div className={open ? "fixed inset-0 z-50 flex items-center justify-center" : "hidden"}>
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
           <div className="relative w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <h2 className="text-base font-semibold text-gray-900">Edit Ad Account</h2>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -182,15 +194,14 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
 
               {error && <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={handleClose} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
                 <button type="submit" disabled={loading} className="rounded-md bg-[hsl(236,85%,55%)] px-4 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] disabled:opacity-50">
                   {loading ? "Saving…" : "Save Changes"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </div>
     </>
   );
 }
