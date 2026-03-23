@@ -16,6 +16,7 @@ import { users, clients, transactions } from "../db/schema";
 
 const BASE = "http://localhost:3000";
 const TEST_EMAIL = "test-sprint3@example.com";
+const TEST_FIELDS_EMAIL = "test-sprint3-fields@example.com";
 const COOKIE_NAME = "authjs.session-token";
 const SALT = COOKIE_NAME;
 
@@ -67,15 +68,17 @@ async function api(method: string, path: string, body?: unknown) {
 async function cleanup() {
   const sql = neon(process.env.DATABASE_URL!);
   const db = drizzle(sql);
-  // Delete transactions for test clients first (FK constraint)
-  const testClients = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.email, TEST_EMAIL));
-  for (const c of testClients) {
-    await db.delete(transactions).where(eq(transactions.client_id, c.id));
+  const emailsToClean = [TEST_EMAIL, TEST_FIELDS_EMAIL];
+  for (const email of emailsToClean) {
+    const testClients = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.email, email));
+    for (const c of testClients) {
+      await db.delete(transactions).where(eq(transactions.client_id, c.id));
+    }
+    await db.delete(clients).where(eq(clients.email, email));
   }
-  await db.delete(clients).where(eq(clients.email, TEST_EMAIL));
 }
 
 // ── Test suite ───────────────────────────────────────────────────────────────
@@ -264,5 +267,100 @@ describe("Wallet balance calculations", () => {
     const db = drizzle(sql);
     await db.delete(transactions).where(eq(transactions.client_id, dynId));
     await db.delete(clients).where(eq(clients.id, dynId));
+  });
+});
+
+// ── New fields tests ──────────────────────────────────────────────────────────
+describe("POST /api/clients — new fields (notes, setup, platform fees)", () => {
+  it("creates client with notes, has_setup and platform fees", async () => {
+    const { status, data } = await api("POST", "/api/clients", {
+      name: "Fields Test Client",
+      email: TEST_FIELDS_EMAIL,
+      balance_model: "classic",
+      billing_currency: "USD",
+      crypto_fee_rate: 0,
+      notes: "Internal test notes",
+      has_setup: true,
+      setup_monthly_fee: 500,
+      setup_monthly_cost: 200,
+      client_platform_fees: { meta: 2, google: 1.5, tiktok: 0, snapchat: 0, pinterest: 0 },
+    });
+    assert.equal(status, 201, `Expected 201, got ${status}: ${JSON.stringify(data)}`);
+    assert.equal(data.notes, "Internal test notes");
+    assert.equal(data.has_setup, true);
+    assert.equal(parseFloat(data.setup_monthly_fee), 500);
+    assert.equal(parseFloat(data.setup_monthly_cost), 200);
+    assert.ok(data.client_platform_fees, "Should have client_platform_fees");
+    assert.equal(data.client_platform_fees.meta, 2);
+    assert.equal(data.client_platform_fees.google, 1.5);
+  });
+
+  it("GET /api/clients/[id] returns new fields", async () => {
+    const sql = neon(process.env.DATABASE_URL!);
+    const db = drizzle(sql);
+    const [c] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.email, TEST_FIELDS_EMAIL))
+      .limit(1);
+    assert.ok(c, "Fields test client should exist");
+
+    const { status, data } = await api("GET", `/api/clients/${c.id}`);
+    assert.equal(status, 200);
+    assert.equal(data.notes, "Internal test notes");
+    assert.equal(data.has_setup, true);
+    assert.ok("setup_monthly_fee" in data, "Should have setup_monthly_fee");
+    assert.ok("client_platform_fees" in data, "Should have client_platform_fees");
+  });
+});
+
+// ── Withdraw / Refund tests ───────────────────────────────────────────────────
+describe("POST /api/clients/[id]/withdraw — debit wallet", () => {
+  it("creates a withdraw transaction and decreases balance", async () => {
+    // testClientId has balance 1490 at this point (1000 USD + 490 USDT net)
+    const { status, data } = await api("POST", `/api/clients/${testClientId}/withdraw`, {
+      amount: 100,
+      type: "withdraw",
+      description: "Test withdraw",
+    });
+    assert.equal(status, 201, `Got: ${JSON.stringify(data)}`);
+    assert.ok(data.transaction, "Should return transaction");
+    assert.equal(data.transaction.type, "withdraw");
+    assert.equal(parseFloat(data.transaction.amount), 100);
+    assert.equal(typeof data.wallet_balance, "number");
+    assert.equal(data.wallet_balance, 1390, `Balance should be 1390, got ${data.wallet_balance}`);
+  });
+
+  it("creates a refund transaction and decreases balance", async () => {
+    const { status, data } = await api("POST", `/api/clients/${testClientId}/withdraw`, {
+      amount: 50,
+      type: "refund",
+      description: "Test refund",
+    });
+    assert.equal(status, 201, `Got: ${JSON.stringify(data)}`);
+    assert.equal(data.transaction.type, "refund");
+    assert.equal(parseFloat(data.transaction.amount), 50);
+    assert.equal(data.wallet_balance, 1340, `Balance should be 1340, got ${data.wallet_balance}`);
+  });
+
+  it("wallet balance reflects both withdraw and refund", async () => {
+    const { data } = await api("GET", `/api/clients/${testClientId}`);
+    assert.equal(data.wallet_balance, 1340, `Balance should be 1340, got ${data.wallet_balance}`);
+  });
+
+  it("rejects invalid type", async () => {
+    const { status } = await api("POST", `/api/clients/${testClientId}/withdraw`, {
+      amount: 50,
+      type: "payment",
+    });
+    assert.equal(status, 400, "Invalid type should return 400");
+  });
+
+  it("rejects non-positive amount", async () => {
+    const { status } = await api("POST", `/api/clients/${testClientId}/withdraw`, {
+      amount: -10,
+      type: "withdraw",
+    });
+    assert.equal(status, 400, "Negative amount should return 400");
   });
 });

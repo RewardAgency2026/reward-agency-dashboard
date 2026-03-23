@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { clients, affiliates, transactions } from "@/db/schema";
+import { clients, affiliates } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { ClientsTable } from "@/components/clients/clients-table";
 import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
@@ -24,6 +24,7 @@ export default async function ClientsPage() {
         crypto_fee_rate: clients.crypto_fee_rate,
         affiliate_id: clients.affiliate_id,
         affiliate_name: affiliates.name,
+        has_setup: clients.has_setup,
         created_at: clients.created_at,
       })
       .from(clients)

@@ -8,6 +8,7 @@ import {
   timestamp,
   date,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -52,6 +53,11 @@ export const clients = pgTable("clients", {
   status: text("status").notNull().default("active"), // active|paused|churned
   affiliate_id: uuid("affiliate_id").references(() => affiliates.id, { onDelete: "set null" }),
   onboarding_source: text("onboarding_source").notNull().default("manual"), // manual|affiliate_link
+  notes: text("notes"),
+  has_setup: boolean("has_setup").notNull().default(false),
+  setup_monthly_fee: numeric("setup_monthly_fee", { precision: 10, scale: 2 }),
+  setup_monthly_cost: numeric("setup_monthly_cost", { precision: 10, scale: 2 }),
+  client_platform_fees: jsonb("client_platform_fees").$type<{ meta: number; google: number; tiktok: number; snapchat: number; pinterest: number } | null>(),
   created_at: timestamp("created_at").notNull().default(now()),
 });
 

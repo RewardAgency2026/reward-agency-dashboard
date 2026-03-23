@@ -6,6 +6,14 @@ import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
 
+const platformFeesSchema = z.object({
+  meta: z.number().min(0).max(100).default(0),
+  google: z.number().min(0).max(100).default(0),
+  tiktok: z.number().min(0).max(100).default(0),
+  snapchat: z.number().min(0).max(100).default(0),
+  pinterest: z.number().min(0).max(100).default(0),
+});
+
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   company: z.string().optional(),
@@ -13,6 +21,11 @@ const patchSchema = z.object({
   crypto_fee_rate: z.number().min(0).max(100).optional(),
   billing_currency: z.enum(["USD", "EUR"]).optional(),
   affiliate_id: z.string().uuid().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  has_setup: z.boolean().optional(),
+  setup_monthly_fee: z.number().min(0).nullable().optional(),
+  setup_monthly_cost: z.number().min(0).nullable().optional(),
+  client_platform_fees: platformFeesSchema.nullable().optional(),
 });
 
 export async function GET(
@@ -37,6 +50,11 @@ export async function GET(
       affiliate_name: affiliates.name,
       affiliate_code: affiliates.affiliate_code,
       onboarding_source: clients.onboarding_source,
+      notes: clients.notes,
+      has_setup: clients.has_setup,
+      setup_monthly_fee: clients.setup_monthly_fee,
+      setup_monthly_cost: clients.setup_monthly_cost,
+      client_platform_fees: clients.client_platform_fees,
       created_at: clients.created_at,
     })
     .from(clients)
@@ -121,6 +139,11 @@ export async function PATCH(
   if (d.crypto_fee_rate !== undefined) updates.crypto_fee_rate = String(d.crypto_fee_rate);
   if (d.billing_currency !== undefined) updates.billing_currency = d.billing_currency;
   if ("affiliate_id" in d) updates.affiliate_id = d.affiliate_id ?? null;
+  if ("notes" in d) updates.notes = d.notes ?? null;
+  if (d.has_setup !== undefined) updates.has_setup = d.has_setup;
+  if ("setup_monthly_fee" in d) updates.setup_monthly_fee = d.setup_monthly_fee != null ? String(d.setup_monthly_fee) : null;
+  if ("setup_monthly_cost" in d) updates.setup_monthly_cost = d.setup_monthly_cost != null ? String(d.setup_monthly_cost) : null;
+  if ("client_platform_fees" in d) updates.client_platform_fees = d.client_platform_fees ?? null;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

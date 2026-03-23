@@ -22,6 +22,7 @@ interface Client {
   balance_model: string;
   billing_currency: string;
   wallet_balance: number;
+  has_setup: boolean;
   affiliate_name: string | null;
   created_at: string;
 }
@@ -138,7 +139,12 @@ export function ClientsTable({ clients, affiliates, isAdmin }: Props) {
                     <span className="font-mono text-xs text-gray-600">{c.client_code}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{c.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{c.name}</p>
+                      {c.has_setup && (
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Setup</span>
+                      )}
+                    </div>
                     {c.company && <p className="text-xs text-gray-400">{c.company}</p>}
                   </td>
                   <td className="px-4 py-3">

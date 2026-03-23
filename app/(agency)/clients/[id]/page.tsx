@@ -25,6 +25,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       affiliate_name: affiliates.name,
       affiliate_code: affiliates.affiliate_code,
       onboarding_source: clients.onboarding_source,
+      notes: clients.notes,
+      has_setup: clients.has_setup,
+      setup_monthly_fee: clients.setup_monthly_fee,
+      setup_monthly_cost: clients.setup_monthly_cost,
+      client_platform_fees: clients.client_platform_fees,
       created_at: clients.created_at,
     })
     .from(clients)

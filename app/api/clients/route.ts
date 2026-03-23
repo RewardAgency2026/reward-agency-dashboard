@@ -7,6 +7,14 @@ import { z } from "zod";
 import { generateClientCode } from "@/lib/client-code";
 import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
 
+const platformFeesSchema = z.object({
+  meta: z.number().min(0).max(100).default(0),
+  google: z.number().min(0).max(100).default(0),
+  tiktok: z.number().min(0).max(100).default(0),
+  snapchat: z.number().min(0).max(100).default(0),
+  pinterest: z.number().min(0).max(100).default(0),
+});
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email"),
@@ -15,6 +23,11 @@ const createSchema = z.object({
   billing_currency: z.enum(["USD", "EUR"]),
   crypto_fee_rate: z.number().min(0).max(100).optional().default(0),
   affiliate_id: z.string().uuid().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  has_setup: z.boolean().optional().default(false),
+  setup_monthly_fee: z.number().min(0).nullable().optional(),
+  setup_monthly_cost: z.number().min(0).nullable().optional(),
+  client_platform_fees: platformFeesSchema.nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -52,6 +65,7 @@ export async function GET(req: NextRequest) {
       crypto_fee_rate: clients.crypto_fee_rate,
       affiliate_id: clients.affiliate_id,
       affiliate_name: affiliates.name,
+      has_setup: clients.has_setup,
       created_at: clients.created_at,
     })
     .from(clients)
@@ -111,6 +125,11 @@ export async function POST(req: NextRequest) {
       billing_currency: d.billing_currency,
       crypto_fee_rate: String(d.crypto_fee_rate),
       affiliate_id: d.affiliate_id ?? null,
+      notes: d.notes ?? null,
+      has_setup: d.has_setup ?? false,
+      setup_monthly_fee: d.setup_monthly_fee != null ? String(d.setup_monthly_fee) : null,
+      setup_monthly_cost: d.setup_monthly_cost != null ? String(d.setup_monthly_cost) : null,
+      client_platform_fees: d.client_platform_fees ?? null,
     })
     .returning();
 

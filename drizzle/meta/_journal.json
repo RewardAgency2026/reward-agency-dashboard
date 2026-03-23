@@ -15,6 +15,13 @@
       "when": 1774244804478,
       "tag": "0001_harsh_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774249192013,
+      "tag": "0002_orange_starhawk",
+      "breakpoints": true
     }
   ]
 }
