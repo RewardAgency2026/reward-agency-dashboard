@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, affiliates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -19,22 +19,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        // Look up agency user
-        const [user] = await db
+        // 1. Agency user (admin / team / accountant)
+        const [agencyUser] = await db
           .select()
           .from(users)
           .where(eq(users.email, email))
           .limit(1);
 
-        if (user) {
-          const valid = await bcrypt.compare(password, user.password_hash);
+        if (agencyUser) {
+          const valid = await bcrypt.compare(password, agencyUser.password_hash);
           if (!valid) return null;
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
+            id: agencyUser.id,
+            email: agencyUser.email,
+            name: agencyUser.name,
+            role: agencyUser.role,
             userType: "agency" as const,
+          };
+        }
+
+        // 2. Affiliate
+        const [affiliate] = await db
+          .select()
+          .from(affiliates)
+          .where(eq(affiliates.email, email))
+          .limit(1);
+
+        if (affiliate?.password_hash) {
+          const valid = await bcrypt.compare(password, affiliate.password_hash);
+          if (!valid) return null;
+          return {
+            id: affiliate.id,
+            email: affiliate.email,
+            name: affiliate.name,
+            role: "affiliate",
+            userType: "affiliate" as const,
           };
         }
 

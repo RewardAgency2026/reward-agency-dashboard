@@ -24,6 +24,7 @@ export const affiliates = pgTable("affiliates", {
   billing_vat: text("billing_vat"),
   commission_rate: numeric("commission_rate", { precision: 5, scale: 2 }).notNull(),
   referral_link: text("referral_link"),
+  password_hash: text("password_hash"), // nullable: set when affiliate activates their account
   status: text("status").notNull().default("active"), // active|inactive
   created_at: timestamp("created_at").notNull().default(now()),
 });

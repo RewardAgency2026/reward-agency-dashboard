@@ -1,55 +1,65 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+// All first-level segments owned by the agency portal
+const AGENCY_SEGMENTS = new Set([
+  "dashboard",
+  "clients",
+  "ad-accounts",
+  "suppliers",
+  "topup-requests",
+  "transactions",
+  "invoices",
+  "pnl",
+  "affiliates",
+  "settings",
+]);
+
+function routeType(pathname: string): "login" | "agency" | "client" | "affiliate" | "public" {
+  if (pathname === "/login") return "login";
+  if (pathname.startsWith("/portal")) return "client";
+  // Must check "/affiliate/" (with trailing slash) before agency check
+  // to avoid matching "/affiliates" as an affiliate route
+  if (pathname === "/affiliate" || pathname.startsWith("/affiliate/")) return "affiliate";
+  const segment = pathname.split("/")[1];
+  if (segment && AGENCY_SEGMENTS.has(segment)) return "agency";
+  return "public";
+}
+
 export default auth((req) => {
   const { nextUrl, auth: session } = req;
   const isLoggedIn = !!session;
-  const { pathname } = nextUrl;
+  const type = routeType(nextUrl.pathname);
 
-  // Public routes
-  if (pathname === "/login") {
-    if (isLoggedIn) {
-      const userType = session.user.userType;
-      const role = session.user.role;
-      if (userType === "client") {
-        return NextResponse.redirect(new URL("/portal/dashboard", nextUrl));
-      } else if (userType === "affiliate") {
-        return NextResponse.redirect(new URL("/affiliate/dashboard", nextUrl));
-      } else if (["admin", "team", "accountant"].includes(role)) {
-        return NextResponse.redirect(new URL("/dashboard", nextUrl));
-      }
-    }
+  if (type === "login") {
+    if (!isLoggedIn) return NextResponse.next();
+    const { userType, role } = session.user;
+    if (userType === "client") return NextResponse.redirect(new URL("/portal/dashboard", nextUrl));
+    if (userType === "affiliate") return NextResponse.redirect(new URL("/affiliate/dashboard", nextUrl));
+    if (["admin", "team", "accountant"].includes(role))
+      return NextResponse.redirect(new URL("/dashboard", nextUrl));
     return NextResponse.next();
   }
 
-  // Protected agency routes
-  if (pathname.startsWith("/dashboard")) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/login", nextUrl));
-    }
-    const role = session.user.role;
-    if (!["admin", "team", "accountant"].includes(role)) {
+  if (!isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", nextUrl));
+  }
+
+  if (type === "agency") {
+    if (!["admin", "team", "accountant"].includes(session.user.role)) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
-  // Protected client portal
-  if (pathname.startsWith("/portal")) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/login", nextUrl));
-    }
+  if (type === "client") {
     if (session.user.userType !== "client") {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
-  // Protected affiliate portal
-  if (pathname.startsWith("/affiliate")) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/login", nextUrl));
-    }
+  if (type === "affiliate") {
     if (session.user.userType !== "affiliate") {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
