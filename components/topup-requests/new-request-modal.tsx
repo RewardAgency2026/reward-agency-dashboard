@@ -105,14 +105,14 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
         onClick={() => handleOpenChange(true)}
         className="rounded-lg bg-[hsl(236,85%,55%)] px-4 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] transition-colors"
       >
-        {label ?? "New Request"}
+        {label ?? "New Top-Up"}
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
             <div className="border-b border-gray-100 px-6 py-4">
-              <h2 className="text-base font-semibold text-gray-900">New Top-Up Request</h2>
+              <h2 className="text-base font-semibold text-gray-900">New Top-Up</h2>
             </div>
 
             <form onSubmit={handleSubmit}>

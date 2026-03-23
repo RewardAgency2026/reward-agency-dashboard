@@ -89,7 +89,7 @@ interface Props {
   adAccountOptions: AdAccountOption[];
 }
 
-const TABS = ["Overview", "Ad Accounts", "Transactions", "Top-Up Requests"] as const;
+const TABS = ["Overview", "Ad Accounts", "Transactions", "Top Ups"] as const;
 
 // payment → green (+), topup/withdraw/refund/spend_record → deduction colors
 const TXN_TYPE_BADGE: Record<string, string> = {
@@ -367,7 +367,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
         </div>
       )}
 
-      {tab === "Top-Up Requests" && (
+      {tab === "Top Ups" && (
         <div>
           {canCredit && (
             <div className="mb-4 flex justify-end">
@@ -382,7 +382,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
                 }]}
                 adAccounts={adAccountOptions}
                 prefillClientId={client.id}
-                label="New Request"
+                label="New Top-Up"
               />
             </div>
           )}

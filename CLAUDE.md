@@ -186,7 +186,7 @@ To be added in Sprint 4.
 | Sprint 2 | ✅ Done | Agency sidebar (dark navy), all nav items, route groups (agency/client/affiliate), placeholder pages |
 | Sprint 3 | ✅ Done | Clients CRUD, wallet balance, credit/withdraw/refund, platform fees, setup config, notes, 22/22 tests |
 | Sprint 4 | ✅ Done | Suppliers + Ad Accounts module (sub-account hierarchy, 21/21 tests) |
-| Sprint 5 | ✅ Done | Top-Up Requests (client requests → agency executes, 16/16 tests) |
+| Sprint 5 | ✅ Done | Top Ups module (renamed from "Top-Up Requests" in UI, 16/16 tests) |
 | Sprint 6 | 🔄 Next | Transactions (full ledger view, filters) |
 | Sprint 7 | ⏳ | Affiliates module (commissions, referrals) |
 | Sprint 8 | ⏳ | P&L + Invoices |
@@ -206,11 +206,12 @@ To be added in Sprint 4.
 - API: GET/POST /api/ad-accounts, GET/PATCH /api/ad-accounts/[id]
 - Tests: sprint4.test.ts
 
-### Sprint 5 — Top-Up Requests
-- Client submits top-up request for an ad account
-- Agency reviews: approve → check balance → execute (creates topup transaction + supplier payment)
+### Sprint 5 — Top Ups (UI label; API stays /api/topup-requests)
+- Agency creates top-up on behalf of client; auto-status approved/insufficient_funds
+- Execute: re-checks balance, stores fee snapshots; force=true bypasses balance check
 - Status flow: pending → approved → executed | rejected | insufficient_funds
-- API: POST /api/topup-requests, PATCH /api/topup-requests/[id]/execute
+- Sidebar shows red badge with count of pending+approved+insufficient_funds requests
+- API: POST /api/topup-requests, POST /api/topup-requests/[id]/execute|reject, GET /api/topup-requests/count
 
 ### Sprint 6 — Transactions
 - Full transaction ledger with filters (type, date range, client)

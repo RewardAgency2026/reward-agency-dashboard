@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -23,7 +24,7 @@ const NAV_ITEMS = [
   { label: "Clients", href: "/clients", icon: Users },
   { label: "Ad Accounts", href: "/ad-accounts", icon: MonitorPlay },
   { label: "Suppliers", href: "/suppliers", icon: Truck },
-  { label: "Top Up Requests", href: "/topup-requests", icon: ArrowUpCircle },
+  { label: "Top Ups", href: "/topup-requests", icon: ArrowUpCircle, badge: true },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "P&L Report", href: "/pnl", icon: BarChart2 },
@@ -38,6 +39,24 @@ interface Props {
 
 export function AgencySidebar({ userName, userRole }: Props) {
   const pathname = usePathname();
+  const [topupCount, setTopupCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchCount() {
+      try {
+        const res = await fetch("/api/topup-requests/count");
+        if (res.ok) {
+          const { count } = await res.json();
+          setTopupCount(count ?? 0);
+        }
+      } catch {
+        // silently ignore
+      }
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [pathname]); // re-fetch on every navigation
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-[hsl(222,47%,11%)]">
@@ -52,7 +71,8 @@ export function AgencySidebar({ userName, userRole }: Props) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          {NAV_ITEMS.map(({ label, href, icon: Icon, ...rest }) => {
+            const hasBadge = "badge" in rest && rest.badge;
             const isActive =
               href === "/dashboard"
                 ? pathname === "/dashboard"
@@ -70,7 +90,12 @@ export function AgencySidebar({ userName, userRole }: Props) {
                   )}
                 >
                   <Icon size={16} className="shrink-0" />
-                  <span className="truncate">{label}</span>
+                  <span className="flex-1 truncate">{label}</span>
+                  {hasBadge && topupCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                      {topupCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

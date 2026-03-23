@@ -98,9 +98,9 @@ export default async function TopupRequestsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Top-Up Requests</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Top Ups</h1>
         {isAdmin && (
-          <NewRequestModal clients={clientOptions} adAccounts={adAccountRows} />
+          <NewRequestModal clients={clientOptions} adAccounts={adAccountRows} label="New Top-Up" />
         )}
       </div>
       <TopupRequestsTable requests={requestRows} isAdmin={isAdmin} />
