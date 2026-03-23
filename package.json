@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx db/seed.ts",
-    "test:sprint2": "tsx --test tests/sprint2.test.ts"
+    "test:sprint2": "tsx --test tests/sprint2.test.ts",
+    "test:sprint3": "tsx --test tests/sprint3.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
@@ -27,7 +28,8 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "^18",
     "react-dom": "^18",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
