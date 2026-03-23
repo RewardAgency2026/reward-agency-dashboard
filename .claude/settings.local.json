@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(npx:*)",
+      "Bash(1:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(openssl rand:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
