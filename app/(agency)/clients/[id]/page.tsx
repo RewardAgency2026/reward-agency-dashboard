@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { clients, affiliates, transactions, ad_accounts, suppliers } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { clients, affiliates, transactions, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
 import { calculateWalletBalance } from "@/lib/balance";
 import { ClientTabs } from "@/components/clients/client-tabs";
 
@@ -67,6 +67,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         top_up_fee_rate: ad_accounts.top_up_fee_rate,
         status: ad_accounts.status,
         supplier_id: ad_accounts.supplier_id,
+        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
       })
       .from(ad_accounts)
       .where(eq(ad_accounts.client_id, params.id)),
@@ -82,6 +83,35 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       .where(eq(suppliers.status, "active"))
       .orderBy(suppliers.name),
   ]);
+
+  // Fetch sub-accounts + fees for supplier options in AddAdAccountModal
+  const subAccountRows = await db
+    .select()
+    .from(supplier_sub_accounts)
+    .where(eq(supplier_sub_accounts.status, "active"));
+
+  const subIds = subAccountRows.map((sa) => sa.id);
+  const feeRows = subIds.length > 0
+    ? await db.select().from(supplier_platform_fees).where(inArray(supplier_platform_fees.supplier_sub_account_id, subIds))
+    : [];
+
+  const feesBySubAccount = new Map<string, Record<string, number>>();
+  for (const f of feeRows) {
+    if (!feesBySubAccount.has(f.supplier_sub_account_id)) feesBySubAccount.set(f.supplier_sub_account_id, {});
+    feesBySubAccount.get(f.supplier_sub_account_id)![f.platform] = parseFloat(f.fee_rate);
+  }
+
+  const subsBySupplier = new Map<string, Array<{ id: string; name: string; platform_fees: Record<string, number> }>>();
+  for (const sa of subAccountRows) {
+    if (!subsBySupplier.has(sa.supplier_id)) subsBySupplier.set(sa.supplier_id, []);
+    subsBySupplier.get(sa.supplier_id)!.push({ id: sa.id, name: sa.name, platform_fees: feesBySubAccount.get(sa.id) ?? {} });
+  }
+
+  const suppliersWithSubs = supplierList.map((s) => ({
+    id: s.id,
+    name: s.name,
+    sub_accounts: subsBySupplier.get(s.id) ?? [],
+  }));
 
   const canCredit = ["admin", "team"].includes(session.user.role);
 
@@ -99,6 +129,6 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   };
 
   return (
-    <ClientTabs client={clientData} affiliates={affiliateList} suppliers={supplierList} canCredit={canCredit} />
+    <ClientTabs client={clientData} affiliates={affiliateList} suppliers={suppliersWithSubs} canCredit={canCredit} />
   );
 }

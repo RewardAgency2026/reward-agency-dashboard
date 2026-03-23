@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { suppliers, supplier_platform_fees, ad_accounts, clients, supplier_payments } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { suppliers, supplier_sub_accounts, supplier_platform_fees, ad_accounts, clients, supplier_payments, transactions } from "@/db/schema";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { SupplierTabs } from "@/components/suppliers/supplier-tabs";
 
 export default async function SupplierDetailPage({ params }: { params: { id: string } }) {
@@ -12,28 +12,15 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
   const isAdmin = ["admin", "team"].includes(session.user.role);
 
   const [supplierRow] = await db
-    .select({
-      id: suppliers.id,
-      name: suppliers.name,
-      contact_email: suppliers.contact_email,
-      status: suppliers.status,
-      created_at: suppliers.created_at,
-    })
+    .select()
     .from(suppliers)
     .where(eq(suppliers.id, params.id))
     .limit(1);
 
   if (!supplierRow) notFound();
 
-  const [feeRows, adAccountRows, paymentRows] = await Promise.all([
-    db
-      .select({
-        id: supplier_platform_fees.id,
-        platform: supplier_platform_fees.platform,
-        fee_rate: supplier_platform_fees.fee_rate,
-      })
-      .from(supplier_platform_fees)
-      .where(eq(supplier_platform_fees.supplier_id, params.id)),
+  const [subAccountRows, adAccountRows, paymentRows, paymentSumRows, topupSumRows] = await Promise.all([
+    db.select().from(supplier_sub_accounts).where(eq(supplier_sub_accounts.supplier_id, params.id)),
 
     db
       .select({
@@ -43,41 +30,89 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
         account_name: ad_accounts.account_name,
         top_up_fee_rate: ad_accounts.top_up_fee_rate,
         status: ad_accounts.status,
+        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
         client_name: clients.name,
         client_code: clients.client_code,
       })
       .from(ad_accounts)
       .leftJoin(clients, eq(ad_accounts.client_id, clients.id))
-      .where(eq(ad_accounts.supplier_id, params.id)),
+      .where(eq(ad_accounts.supplier_id, params.id))
+      .orderBy(desc(ad_accounts.created_at)),
 
     db
-      .select({
-        id: supplier_payments.id,
-        amount: supplier_payments.amount,
-        currency: supplier_payments.currency,
-        bank_fees: supplier_payments.bank_fees,
-        bank_fees_note: supplier_payments.bank_fees_note,
-        payment_method: supplier_payments.payment_method,
-        reference: supplier_payments.reference,
-        status: supplier_payments.status,
-        paid_at: supplier_payments.paid_at,
-        created_at: supplier_payments.created_at,
-      })
+      .select()
       .from(supplier_payments)
       .where(eq(supplier_payments.supplier_id, params.id))
       .orderBy(desc(supplier_payments.created_at)),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${supplier_payments.amount}), 0)` })
+      .from(supplier_payments)
+      .where(eq(supplier_payments.supplier_id, params.id)),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(and(
+        eq(transactions.type, "topup"),
+        eq(ad_accounts.supplier_id, params.id)
+      )),
   ]);
+
+  // Fetch fees for all sub-accounts
+  const subAccountIds = subAccountRows.map((sa) => sa.id);
+  const allFees = subAccountIds.length > 0
+    ? await db
+        .select()
+        .from(supplier_platform_fees)
+        .where(inArray(supplier_platform_fees.supplier_sub_account_id, subAccountIds))
+    : [];
+
+  const feesBySubAccount = new Map<string, typeof allFees>();
+  for (const f of allFees) {
+    if (!feesBySubAccount.has(f.supplier_sub_account_id)) feesBySubAccount.set(f.supplier_sub_account_id, []);
+    feesBySubAccount.get(f.supplier_sub_account_id)!.push(f);
+  }
+
+  const subAccounts = subAccountRows.map((sa) => ({
+    ...sa,
+    created_at: sa.created_at.toISOString(),
+    platform_fees: (feesBySubAccount.get(sa.id) ?? []).map((f) => ({
+      id: f.id,
+      platform: f.platform,
+      fee_rate: f.fee_rate,
+    })),
+  }));
+
+  const subAccountNameMap = new Map(subAccountRows.map((sa) => [sa.id, sa.name]));
+  const adAccountsMapped = adAccountRows.map((a) => ({
+    ...a,
+    sub_account_name: a.supplier_sub_account_id ? (subAccountNameMap.get(a.supplier_sub_account_id) ?? null) : null,
+    client_name: a.client_name ?? null,
+    client_code: a.client_code ?? null,
+  }));
+
+  const totalPayments = parseFloat(paymentSumRows[0]?.total ?? "0");
+  const totalTopups = parseFloat(topupSumRows[0]?.total ?? "0");
 
   const supplierData = {
     ...supplierRow,
     created_at: supplierRow.created_at.toISOString(),
-    platform_fees: feeRows,
-    ad_accounts: adAccountRows,
+    sub_accounts: subAccounts,
+    ad_accounts: adAccountsMapped,
     payments: paymentRows.map((p) => ({
       ...p,
       paid_at: p.paid_at?.toISOString() ?? null,
       created_at: p.created_at.toISOString(),
     })),
+    kpis: {
+      total_payments_sent: totalPayments,
+      total_topups: totalTopups,
+      remaining_balance: totalPayments - totalTopups,
+      total_ad_accounts: adAccountRows.length,
+      total_sub_accounts: subAccountRows.length,
+    },
   };
 
   return <SupplierTabs supplier={supplierData} isAdmin={isAdmin} />;

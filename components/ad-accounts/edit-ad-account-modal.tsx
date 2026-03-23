@@ -7,6 +7,7 @@ import { X, Pencil } from "lucide-react";
 interface SupplierOption {
   id: string;
   name: string;
+  sub_accounts: Array<{ id: string; name: string }>;
 }
 
 interface AdAccount {
@@ -17,6 +18,7 @@ interface AdAccount {
   top_up_fee_rate: string;
   status: string;
   supplier_id: string;
+  supplier_sub_account_id: string | null;
 }
 
 interface Props {
@@ -42,6 +44,7 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
     account_id: adAccount.account_id,
     account_name: adAccount.account_name,
     supplier_id: adAccount.supplier_id,
+    supplier_sub_account_id: adAccount.supplier_sub_account_id ?? "",
     top_up_fee_rate: parseFloat(adAccount.top_up_fee_rate),
     status: adAccount.status,
   });
@@ -50,15 +53,30 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  // Sub-accounts filtered by selected supplier
+  const selectedSupplier = suppliers.find((s) => s.id === form.supplier_id);
+  const subAccounts = selectedSupplier?.sub_accounts ?? [];
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
+      const body: Record<string, unknown> = {
+        platform: form.platform,
+        account_id: form.account_id,
+        account_name: form.account_name,
+        top_up_fee_rate: form.top_up_fee_rate,
+        status: form.status,
+      };
+      if (form.supplier_sub_account_id) {
+        body.supplier_sub_account_id = form.supplier_sub_account_id;
+      }
+
       const res = await fetch(`/api/ad-accounts/${adAccount.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Update failed"); return; }
@@ -116,6 +134,13 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Supplier</label>
                   <select value={form.supplier_id} onChange={(e) => set("supplier_id", e.target.value)} className={inputCls}>
                     {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Sub-Account</label>
+                  <select value={form.supplier_sub_account_id} onChange={(e) => set("supplier_sub_account_id", e.target.value)} className={inputCls}>
+                    <option value="">None</option>
+                    {subAccounts.map((sa) => <option key={sa.id} value={sa.id}>{sa.name}</option>)}
                   </select>
                 </div>
                 <div>

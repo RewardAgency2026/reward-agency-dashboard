@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { suppliers, supplier_platform_fees, ad_accounts } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { suppliers, supplier_sub_accounts, supplier_platform_fees, ad_accounts, supplier_payments, transactions } from "@/db/schema";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -14,9 +14,41 @@ export async function GET(_req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [allSuppliers, allFees, counts] = await Promise.all([
+  const [
+    allSuppliers,
+    allSubAccounts,
+    allFees,
+    paymentSums,
+    topupSums,
+    adAccountCounts,
+  ] = await Promise.all([
     db.select().from(suppliers).orderBy(desc(suppliers.created_at)),
+
+    db.select().from(supplier_sub_accounts),
+
     db.select().from(supplier_platform_fees),
+
+    // Total payments sent per supplier
+    db
+      .select({
+        supplier_id: supplier_payments.supplier_id,
+        total: sql<string>`COALESCE(SUM(${supplier_payments.amount}), 0)`,
+      })
+      .from(supplier_payments)
+      .groupBy(supplier_payments.supplier_id),
+
+    // Total topups per supplier (via ad_accounts join)
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(eq(transactions.type, "topup"))
+      .groupBy(ad_accounts.supplier_id),
+
+    // Ad account counts per supplier
     db
       .select({
         supplier_id: ad_accounts.supplier_id,
@@ -26,19 +58,45 @@ export async function GET(_req: NextRequest) {
       .groupBy(ad_accounts.supplier_id),
   ]);
 
-  const feeMap = new Map<string, Record<string, number>>();
-  for (const f of allFees) {
-    if (!feeMap.has(f.supplier_id)) feeMap.set(f.supplier_id, {});
-    feeMap.get(f.supplier_id)![f.platform] = parseFloat(f.fee_rate);
+  // Build lookup maps
+  const paymentMap = new Map(paymentSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const topupMap = new Map(topupSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const adCountMap = new Map(adAccountCounts.map((r) => [r.supplier_id, r.count]));
+
+  // Group sub-accounts by supplier_id
+  const subAccountMap = new Map<string, typeof allSubAccounts>();
+  for (const sa of allSubAccounts) {
+    if (!subAccountMap.has(sa.supplier_id)) subAccountMap.set(sa.supplier_id, []);
+    subAccountMap.get(sa.supplier_id)!.push(sa);
   }
-  const countMap = new Map(counts.map((c) => [c.supplier_id, c.count]));
+
+  // Group fees by sub-account id
+  const feesBySubAccount = new Map<string, typeof allFees>();
+  for (const f of allFees) {
+    if (!feesBySubAccount.has(f.supplier_sub_account_id)) feesBySubAccount.set(f.supplier_sub_account_id, []);
+    feesBySubAccount.get(f.supplier_sub_account_id)!.push(f);
+  }
 
   return NextResponse.json(
-    allSuppliers.map((s) => ({
-      ...s,
-      platform_fees: feeMap.get(s.id) ?? {},
-      ad_accounts_count: countMap.get(s.id) ?? 0,
-    }))
+    allSuppliers.map((s) => {
+      const subAccounts = (subAccountMap.get(s.id) ?? []).map((sa) => ({
+        ...sa,
+        platform_fees: feesBySubAccount.get(sa.id) ?? [],
+      }));
+      const totalPayments = paymentMap.get(s.id) ?? 0;
+      const totalTopups = topupMap.get(s.id) ?? 0;
+      return {
+        ...s,
+        sub_accounts: subAccounts,
+        kpis: {
+          total_payments_sent: totalPayments,
+          total_topups: totalTopups,
+          remaining_balance: totalPayments - totalTopups,
+          total_ad_accounts: adCountMap.get(s.id) ?? 0,
+          total_sub_accounts: subAccounts.length,
+        },
+      };
+    })
   );
 }
 

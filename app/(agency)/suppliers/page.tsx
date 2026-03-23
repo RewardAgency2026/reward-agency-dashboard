@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { suppliers, supplier_platform_fees, ad_accounts } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { suppliers, supplier_sub_accounts, supplier_platform_fees, ad_accounts, supplier_payments, transactions } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
 import { SuppliersTable } from "@/components/suppliers/suppliers-table";
 import { AddSupplierModal } from "@/components/suppliers/add-supplier-modal";
 
@@ -12,52 +12,80 @@ export default async function SuppliersPage() {
 
   const isAdmin = ["admin", "team"].includes(session.user.role);
 
-  // Fetch all suppliers
-  const supplierRows = await db
-    .select({
-      id: suppliers.id,
-      name: suppliers.name,
-      contact_email: suppliers.contact_email,
-      status: suppliers.status,
-      created_at: suppliers.created_at,
-    })
-    .from(suppliers)
-    .orderBy(suppliers.name);
+  const [
+    supplierRows,
+    subAccountRows,
+    feeRows,
+    paymentSums,
+    topupSums,
+    adCountRows,
+  ] = await Promise.all([
+    db.select().from(suppliers).orderBy(suppliers.name),
+    db.select().from(supplier_sub_accounts),
+    db.select().from(supplier_platform_fees),
+    db
+      .select({
+        supplier_id: supplier_payments.supplier_id,
+        total: sql<string>`COALESCE(SUM(${supplier_payments.amount}), 0)`,
+      })
+      .from(supplier_payments)
+      .groupBy(supplier_payments.supplier_id),
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(eq(transactions.type, "topup"))
+      .groupBy(ad_accounts.supplier_id),
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(ad_accounts)
+      .groupBy(ad_accounts.supplier_id),
+  ]);
 
-  // Batch: platform fees grouped by supplier
-  const feeRows = await db
-    .select({
-      supplier_id: supplier_platform_fees.supplier_id,
-      platform: supplier_platform_fees.platform,
-      fee_rate: supplier_platform_fees.fee_rate,
-    })
-    .from(supplier_platform_fees);
+  // Build lookup maps
+  const paymentMap = new Map(paymentSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const topupMap = new Map(topupSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const adCountMap = new Map(adCountRows.map((r) => [r.supplier_id, r.count]));
 
-  // Batch: ad account counts
-  const countRows = await db
-    .select({
-      supplier_id: ad_accounts.supplier_id,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(ad_accounts)
-    .groupBy(ad_accounts.supplier_id);
-
-  // Combine
-  const feesBySupplier = new Map<string, { platform: string; fee_rate: string }[]>();
+  const feesBySubAccount = new Map<string, { platform: string; fee_rate: string }[]>();
   for (const f of feeRows) {
-    if (!feesBySupplier.has(f.supplier_id)) feesBySupplier.set(f.supplier_id, []);
-    feesBySupplier.get(f.supplier_id)!.push({ platform: f.platform, fee_rate: f.fee_rate });
+    if (!feesBySubAccount.has(f.supplier_sub_account_id)) feesBySubAccount.set(f.supplier_sub_account_id, []);
+    feesBySubAccount.get(f.supplier_sub_account_id)!.push({ platform: f.platform, fee_rate: f.fee_rate });
   }
 
-  const countBySupplier = new Map<string, number>();
-  for (const c of countRows) countBySupplier.set(c.supplier_id, c.count);
+  const subAccountsBySupplier = new Map<string, typeof subAccountRows>();
+  for (const sa of subAccountRows) {
+    if (!subAccountsBySupplier.has(sa.supplier_id)) subAccountsBySupplier.set(sa.supplier_id, []);
+    subAccountsBySupplier.get(sa.supplier_id)!.push(sa);
+  }
 
-  const data = supplierRows.map((s) => ({
-    ...s,
-    created_at: s.created_at.toISOString(),
-    platform_fees: feesBySupplier.get(s.id) ?? [],
-    ad_accounts_count: countBySupplier.get(s.id) ?? 0,
-  }));
+  const data = supplierRows.map((s) => {
+    const subs = (subAccountsBySupplier.get(s.id) ?? []).map((sa) => ({
+      ...sa,
+      created_at: sa.created_at.toISOString(),
+      platform_fees: feesBySubAccount.get(sa.id) ?? [],
+    }));
+    const totalPayments = paymentMap.get(s.id) ?? 0;
+    const totalTopups = topupMap.get(s.id) ?? 0;
+    return {
+      ...s,
+      created_at: s.created_at.toISOString(),
+      sub_accounts: subs,
+      kpis: {
+        total_payments_sent: totalPayments,
+        total_topups: totalTopups,
+        remaining_balance: totalPayments - totalTopups,
+        total_ad_accounts: adCountMap.get(s.id) ?? 0,
+        total_sub_accounts: subs.length,
+      },
+    };
+  });
 
   return (
     <div>

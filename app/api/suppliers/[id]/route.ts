@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { suppliers, supplier_platform_fees, ad_accounts, supplier_payments, clients } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import {
+  suppliers, supplier_sub_accounts, supplier_platform_fees,
+  ad_accounts, supplier_payments, clients, transactions,
+} from "@/db/schema";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const patchSchema = z.object({
@@ -25,11 +28,9 @@ export async function GET(
     .limit(1);
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [fees, adAccountsList, payments] = await Promise.all([
-    db
-      .select()
-      .from(supplier_platform_fees)
-      .where(eq(supplier_platform_fees.supplier_id, params.id)),
+  const [subAccountRows, adAccountRows, payments, paymentSumRows, topupSumRows] = await Promise.all([
+    db.select().from(supplier_sub_accounts).where(eq(supplier_sub_accounts.supplier_id, params.id)),
+
     db
       .select({
         id: ad_accounts.id,
@@ -38,6 +39,7 @@ export async function GET(
         account_name: ad_accounts.account_name,
         top_up_fee_rate: ad_accounts.top_up_fee_rate,
         status: ad_accounts.status,
+        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
         client_name: clients.name,
         client_code: clients.client_code,
       })
@@ -45,18 +47,70 @@ export async function GET(
       .leftJoin(clients, eq(ad_accounts.client_id, clients.id))
       .where(eq(ad_accounts.supplier_id, params.id))
       .orderBy(desc(ad_accounts.created_at)),
+
     db
       .select()
       .from(supplier_payments)
       .where(eq(supplier_payments.supplier_id, params.id))
       .orderBy(desc(supplier_payments.created_at)),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${supplier_payments.amount}), 0)` })
+      .from(supplier_payments)
+      .where(eq(supplier_payments.supplier_id, params.id)),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(and(
+        eq(transactions.type, "topup"),
+        eq(ad_accounts.supplier_id, params.id)
+      )),
   ]);
+
+  // Fetch fees for all sub-accounts
+  const subAccountIds = subAccountRows.map((sa) => sa.id);
+  const allFees = subAccountIds.length > 0
+    ? await db
+        .select()
+        .from(supplier_platform_fees)
+        .where(inArray(supplier_platform_fees.supplier_sub_account_id, subAccountIds))
+    : [];
+
+  // Group fees by sub-account
+  const feesBySubAccount = new Map<string, typeof allFees>();
+  for (const f of allFees) {
+    if (!feesBySubAccount.has(f.supplier_sub_account_id)) feesBySubAccount.set(f.supplier_sub_account_id, []);
+    feesBySubAccount.get(f.supplier_sub_account_id)!.push(f);
+  }
+  const subAccounts = subAccountRows.map((sa) => ({
+    ...sa,
+    platform_fees: feesBySubAccount.get(sa.id) ?? [],
+  }));
+
+  // Add sub-account name to ad-accounts
+  const subAccountNameMap = new Map(subAccountRows.map((sa) => [sa.id, sa.name]));
+  const adAccountsEnriched = adAccountRows.map((a) => ({
+    ...a,
+    sub_account_name: a.supplier_sub_account_id ? (subAccountNameMap.get(a.supplier_sub_account_id) ?? null) : null,
+  }));
+
+  const totalPayments = parseFloat(paymentSumRows[0]?.total ?? "0");
+  const totalTopups = parseFloat(topupSumRows[0]?.total ?? "0");
 
   return NextResponse.json({
     ...supplier,
-    platform_fees: fees,
-    ad_accounts: adAccountsList,
+    sub_accounts: subAccounts,
+    ad_accounts: adAccountsEnriched,
     payments,
+    kpis: {
+      total_payments_sent: totalPayments,
+      total_topups: totalTopups,
+      remaining_balance: totalPayments - totalTopups,
+      total_ad_accounts: adAccountRows.length,
+      total_sub_accounts: subAccountRows.length,
+    },
   });
 }
 

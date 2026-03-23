@@ -5,13 +5,21 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SetFeeModal } from "./set-fee-modal";
+import { AddSubAccountModal } from "./add-sub-account-modal";
+import { EditSubAccountModal } from "./edit-sub-account-modal";
 import { RecordPaymentModal } from "./record-payment-modal";
 
 interface PlatformFee {
   id: string;
   platform: string;
   fee_rate: string;
+}
+
+interface SubAccount {
+  id: string;
+  name: string;
+  status: string;
+  platform_fees: PlatformFee[];
 }
 
 interface AdAccountSummary {
@@ -21,6 +29,8 @@ interface AdAccountSummary {
   account_name: string;
   top_up_fee_rate: string;
   status: string;
+  supplier_sub_account_id: string | null;
+  sub_account_name: string | null;
   client_name: string | null;
   client_code: string | null;
 }
@@ -38,15 +48,24 @@ interface Payment {
   created_at: string;
 }
 
+interface Kpis {
+  total_payments_sent: number;
+  total_topups: number;
+  remaining_balance: number;
+  total_ad_accounts: number;
+  total_sub_accounts: number;
+}
+
 interface Supplier {
   id: string;
   name: string;
   contact_email: string | null;
   status: string;
   created_at: string;
-  platform_fees: PlatformFee[];
+  sub_accounts: SubAccount[];
   ad_accounts: AdAccountSummary[];
   payments: Payment[];
+  kpis: Kpis;
 }
 
 interface Props {
@@ -54,8 +73,7 @@ interface Props {
   isAdmin: boolean;
 }
 
-const TABS = ["Platform Fees", "Ad Accounts", "Payments"] as const;
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const TABS = ["Sub-Accounts", "Ad Accounts", "Payments"] as const;
 
 const PLATFORM_LABELS: Record<string, string> = {
   meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
@@ -82,10 +100,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function SupplierTabs({ supplier, isAdmin }: Props) {
-  const [tab, setTab] = useState<typeof TABS[number]>("Platform Fees");
+function fmt(n: number) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-  const feeByPlatform = new Map(supplier.platform_fees.map((f) => [f.platform, parseFloat(f.fee_rate)]));
+export function SupplierTabs({ supplier, isAdmin }: Props) {
+  const [tab, setTab] = useState<typeof TABS[number]>("Sub-Accounts");
+
+  const { kpis } = supplier;
 
   return (
     <div>
@@ -107,10 +129,32 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
         )}
       </div>
 
-      {/* Info strip */}
-      <div className="mb-6 flex items-center gap-6 text-sm text-gray-500">
+      {/* Info */}
+      <div className="mb-6 text-sm text-gray-500 flex items-center gap-6">
         {supplier.contact_email && <span>{supplier.contact_email}</span>}
         <span>Since {formatDate(supplier.created_at)}</span>
+      </div>
+
+      {/* KPI cards */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">Payments Sent</p>
+          <p className="text-lg font-bold font-mono text-gray-900">${fmt(kpis.total_payments_sent)}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">Total Top-Ups</p>
+          <p className="text-lg font-bold font-mono text-gray-900">${fmt(kpis.total_topups)}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">Remaining Balance</p>
+          <p className={cn("text-lg font-bold font-mono", kpis.remaining_balance >= 0 ? "text-emerald-600" : "text-red-500")}>
+            ${fmt(kpis.remaining_balance)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">Ad Accounts</p>
+          <p className="text-lg font-bold text-gray-900">{kpis.total_ad_accounts}</p>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -127,43 +171,64 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
         </div>
       </div>
 
-      {/* Platform Fees */}
-      {tab === "Platform Fees" && (
-        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Platform</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Rate</th>
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {PLATFORMS.map((p) => {
-                const rate = feeByPlatform.get(p) ?? 0;
-                return (
-                  <tr key={p} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", PLATFORM_BADGE[p])}>
-                        {PLATFORM_LABELS[p]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono">
-                      {rate > 0
-                        ? <span className="text-gray-900 font-medium">{rate}%</span>
-                        : <span className="text-gray-400">Not set</span>
-                      }
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3">
-                        <SetFeeModal supplierId={supplier.id} platform={p} currentRate={rate} />
-                      </td>
-                    )}
+      {/* Sub-Accounts */}
+      {tab === "Sub-Accounts" && (
+        <div>
+          {isAdmin && (
+            <div className="mb-4 flex justify-end">
+              <AddSubAccountModal supplierId={supplier.id} />
+            </div>
+          )}
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            {supplier.sub_accounts.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No sub-accounts yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {["Name", "Platform Fees", "Status", ...(isAdmin ? ["Actions"] : [])].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                    ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {supplier.sub_accounts.map((sa) => (
+                    <tr key={sa.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{sa.name}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {sa.platform_fees.filter((f) => parseFloat(f.fee_rate) > 0).map((f) => (
+                            <span key={f.platform} className={cn("rounded-full px-2 py-0.5 text-xs font-medium", PLATFORM_BADGE[f.platform] ?? "bg-gray-100 text-gray-600")}>
+                              {PLATFORM_LABELS[f.platform] ?? f.platform} {parseFloat(f.fee_rate)}%
+                            </span>
+                          ))}
+                          {sa.platform_fees.filter((f) => parseFloat(f.fee_rate) > 0).length === 0 && (
+                            <span className="text-xs text-gray-400">No fees set</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", STATUS_BADGE[sa.status] ?? "bg-gray-100 text-gray-600")}>
+                          {sa.status}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <EditSubAccountModal
+                            supplierId={supplier.id}
+                            subAccountId={sa.id}
+                            currentName={sa.name}
+                            currentStatus={sa.status}
+                            currentFees={sa.platform_fees}
+                          />
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -176,7 +241,7 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Platform", "Account", "Client", "Fee Rate", "Status"].map((h) => (
+                  {["Platform", "Account", "Sub-Account", "Client", "Fee Rate", "Status"].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                   ))}
                 </tr>
@@ -193,6 +258,7 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
                       <p className="font-medium text-gray-900">{a.account_name}</p>
                       <p className="text-xs font-mono text-gray-400">{a.account_id}</p>
                     </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{a.sub_account_name ?? "—"}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {a.client_name ?? "—"}
                       {a.client_code && <span className="ml-1 text-xs text-gray-400">({a.client_code})</span>}
@@ -259,7 +325,7 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
   );
 }
 
-// ── Inline edit (name, email, status) ────────────────────────────────────────
+// ── Inline edit supplier ─────────────────────────────────────────────────────
 function EditSupplierInline({
   supplierId, currentName, currentEmail, currentStatus,
 }: {
@@ -268,14 +334,13 @@ function EditSupplierInline({
   currentEmail: string | null;
   currentStatus: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(currentName);
   const [email, setEmail] = useState(currentEmail ?? "");
   const [status, setStatus] = useState(currentStatus);
-
-  const router = useRouter();
 
   const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
@@ -311,7 +376,7 @@ function EditSupplierInline({
           <div className="relative w-full max-w-md mx-4 bg-white rounded-lg shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <h2 className="text-base font-semibold text-gray-900">Edit Supplier</h2>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={0} /><span>✕</span></button>
+              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
               <div>

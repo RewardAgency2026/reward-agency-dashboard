@@ -7,6 +7,7 @@ import { EditAdAccountModal } from "./edit-ad-account-modal";
 interface SupplierOption {
   id: string;
   name: string;
+  sub_accounts: Array<{ id: string; name: string }>;
 }
 
 interface AdAccount {
@@ -17,9 +18,11 @@ interface AdAccount {
   top_up_fee_rate: string;
   status: string;
   supplier_id: string;
+  supplier_sub_account_id: string | null;
   client_name: string | null;
   client_code: string | null;
   supplier_name: string | null;
+  sub_account_name: string | null;
 }
 
 interface Props {
@@ -93,7 +96,7 @@ export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {["Platform", "Account", "Client", "Supplier", "Fee Rate", "Status", ...(isAdmin ? ["Actions"] : [])].map((h) => (
+                {["Platform", "Account", "Supplier / Sub-Account", "Client", "Fee Rate", "Status", ...(isAdmin ? ["Actions"] : [])].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
@@ -111,10 +114,13 @@ export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
                     <p className="text-xs font-mono text-gray-400">{a.account_id}</p>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
+                    <p className="text-sm">{a.supplier_name ?? "—"}</p>
+                    {a.sub_account_name && <p className="text-xs text-gray-400">{a.sub_account_name}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
                     {a.client_name ?? "—"}
                     {a.client_code && <span className="ml-1 text-xs text-gray-400">({a.client_code})</span>}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{a.supplier_name ?? "—"}</td>
                   <td className="px-4 py-3 font-mono text-sm">{parseFloat(a.top_up_fee_rate)}%</td>
                   <td className="px-4 py-3">
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", STATUS_BADGE[a.status] ?? "bg-gray-100 text-gray-600")}>

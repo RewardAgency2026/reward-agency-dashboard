@@ -6,16 +6,23 @@ import { X, Plus } from "lucide-react";
 
 type PlatformFees = { meta?: number; google?: number; tiktok?: number; snapchat?: number; pinterest?: number };
 
-interface ClientOption {
+interface SubAccountOption {
   id: string;
   name: string;
-  client_code: string;
-  client_platform_fees: PlatformFees | null;
+  platform_fees: PlatformFees;
 }
 
 interface SupplierOption {
   id: string;
   name: string;
+  sub_accounts: SubAccountOption[];
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
+  client_code: string;
+  client_platform_fees: PlatformFees | null;
 }
 
 interface Props {
@@ -40,22 +47,40 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
 
   const [clientId, setClientId] = useState(prefillClientId ?? "");
   const [supplierId, setSupplierId] = useState("");
+  const [subAccountId, setSubAccountId] = useState("");
   const [platform, setPlatform] = useState("");
   const [accountId, setAccountId] = useState("");
   const [accountName, setAccountName] = useState("");
   const [feeRate, setFeeRate] = useState("");
 
-  // Auto-suggest top_up_fee_rate from client's platform_fees
+  // Sub-accounts filtered by selected supplier
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
+  const subAccounts = selectedSupplier?.sub_accounts ?? [];
+
+  // Reset sub-account when supplier changes
   useEffect(() => {
-    if (!clientId || !platform) return;
-    const client = clients.find((c) => c.id === clientId);
-    const suggested = client?.client_platform_fees?.[platform as keyof PlatformFees];
-    if (suggested !== undefined) setFeeRate(String(suggested));
-  }, [clientId, platform, clients]);
+    setSubAccountId("");
+    setFeeRate("");
+  }, [supplierId]);
+
+  // Auto-suggest fee rate from sub-account's platform fees
+  useEffect(() => {
+    if (!subAccountId || !platform) return;
+    const subAccount = subAccounts.find((sa) => sa.id === subAccountId);
+    const suggested = subAccount?.platform_fees?.[platform as keyof PlatformFees];
+    if (suggested !== undefined) { setFeeRate(String(suggested)); return; }
+    // Fallback: try client platform fees
+    if (clientId) {
+      const client = clients.find((c) => c.id === clientId);
+      const clientSuggested = client?.client_platform_fees?.[platform as keyof PlatformFees];
+      if (clientSuggested !== undefined) setFeeRate(String(clientSuggested));
+    }
+  }, [subAccountId, platform, subAccounts, clientId, clients]);
 
   function reset() {
     setClientId(prefillClientId ?? "");
     setSupplierId("");
+    setSubAccountId("");
     setPlatform("");
     setAccountId("");
     setAccountName("");
@@ -73,7 +98,7 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
-          supplier_id: supplierId,
+          supplier_sub_account_id: subAccountId,
           platform,
           account_id: accountId,
           account_name: accountName,
@@ -125,12 +150,24 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                   </div>
                 )}
 
+                {/* Supplier parent */}
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Supplier *</label>
                   <select required value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={inputCls}>
                     <option value="">Select supplier…</option>
                     {suppliers.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sub-account — filtered by supplier */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Sub-Account *</label>
+                  <select required value={subAccountId} onChange={(e) => setSubAccountId(e.target.value)} className={inputCls} disabled={!supplierId}>
+                    <option value="">{supplierId ? "Select sub-account…" : "Select supplier first"}</option>
+                    {subAccounts.map((sa) => (
+                      <option key={sa.id} value={sa.id}>{sa.name}</option>
                     ))}
                   </select>
                 </div>
@@ -154,8 +191,8 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                     placeholder="0.00"
                     className={inputCls}
                   />
-                  {feeRate && clientId && platform && (
-                    <p className="mt-1 text-xs text-gray-400">Auto-suggested from client platform fees</p>
+                  {feeRate && subAccountId && platform && (
+                    <p className="mt-1 text-xs text-gray-400">Auto-suggested from sub-account fees</p>
                   )}
                 </div>
 

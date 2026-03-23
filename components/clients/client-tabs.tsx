@@ -34,11 +34,13 @@ interface AdAccount {
   top_up_fee_rate: string;
   status: string;
   supplier_id: string;
+  supplier_sub_account_id: string | null;
 }
 
 interface SupplierOption {
   id: string;
   name: string;
+  sub_accounts: Array<{ id: string; name: string; platform_fees: Record<string, number> }>;
 }
 
 type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; pinterest: number };
