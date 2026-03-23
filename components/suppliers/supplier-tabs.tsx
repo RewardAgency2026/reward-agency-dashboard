@@ -92,8 +92,8 @@ const STATUS_BADGE: Record<string, string> = {
   inactive: "bg-gray-100 text-gray-500",
   paused: "bg-amber-50 text-amber-700 border border-amber-200",
   closed: "bg-gray-100 text-gray-500",
-  disabled: "bg-amber-50 text-amber-700 border border-amber-200",
-  deleted: "bg-red-50 text-red-600 border border-red-200",
+  disabled: "bg-red-50 text-red-600 border border-red-200",
+  deleted: "bg-red-100 text-red-900 border border-red-300 line-through",
   paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   pending: "bg-amber-50 text-amber-700 border border-amber-200",
 };

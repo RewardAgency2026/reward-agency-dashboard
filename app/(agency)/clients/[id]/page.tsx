@@ -166,6 +166,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
     client_id: params.id,
     platform: a.platform,
     account_name: a.account_name,
+    top_up_fee_rate: a.top_up_fee_rate,
     status: a.status,
   }));
 

@@ -18,6 +18,7 @@ interface AdAccountOption {
   client_id: string;
   platform: string;
   account_name: string;
+  top_up_fee_rate: string;
   status: string;
 }
 
@@ -29,6 +30,14 @@ interface Props {
 }
 
 const CURRENCIES = ["USD", "EUR", "USDT", "USDC"] as const;
+
+const PLATFORM_LABELS: Record<string, string> = {
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active", disabled: "Disabled", deleted: "Deleted",
+};
 
 export function NewRequestModal({ clients, adAccounts, prefillClientId, label }: Props) {
   const router = useRouter();
@@ -44,13 +53,20 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
 
   const selectedClient = useMemo(() => clients.find((c) => c.id === clientId), [clients, clientId]);
   const filteredAdAccounts = useMemo(
-    () => adAccounts.filter((a) => a.client_id === clientId && a.status === "active"),
+    () => adAccounts.filter((a) => a.client_id === clientId),
     [adAccounts, clientId]
   );
+  const selectedAdAccount = useMemo(() => adAccounts.find((a) => a.id === adAccountId), [adAccounts, adAccountId]);
 
   const parsedAmount = parseFloat(amount) || 0;
-  const balanceOk = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= parsedAmount;
-  const balanceInsufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance < parsedAmount;
+  const feeRate = selectedAdAccount ? parseFloat(selectedAdAccount.top_up_fee_rate) : 0;
+  const feeAmount = parsedAmount > 0 ? parsedAmount * (feeRate / 100) : 0;
+  const totalDeducted = parsedAmount + feeAmount;
+  const newBalance = selectedClient ? selectedClient.wallet_balance - totalDeducted : 0;
+  const balanceSufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= totalDeducted;
+  const balanceInsufficient = selectedClient && parsedAmount > 0 && !balanceSufficient;
+
+  const isDisabledAccount = selectedAdAccount && selectedAdAccount.status !== "active";
 
   function handleOpenChange(isOpen: boolean) {
     setOpen(isOpen);
@@ -87,7 +103,7 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create request");
+        setError(data.error ?? "Failed to create top up");
       } else {
         handleOpenChange(false);
         router.refresh();
@@ -148,12 +164,18 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                     <option value="">Select ad account…</option>
                     {filteredAdAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.platform.charAt(0).toUpperCase() + a.platform.slice(1)} — {a.account_name}
+                        {PLATFORM_LABELS[a.platform] ?? a.platform} — {a.account_name}
+                        {a.status !== "active" ? ` (${STATUS_LABELS[a.status] ?? a.status})` : ""}
                       </option>
                     ))}
                   </select>
                   {clientId && filteredAdAccounts.length === 0 && (
-                    <p className="mt-1 text-xs text-gray-400">No active ad accounts for this client.</p>
+                    <p className="mt-1 text-xs text-gray-400">No ad accounts for this client.</p>
+                  )}
+                  {isDisabledAccount && (
+                    <p className="mt-1.5 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">
+                      This ad account is <strong>{selectedAdAccount.status}</strong> and cannot receive top ups.
+                    </p>
                   )}
                 </div>
 
@@ -183,18 +205,34 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                   </div>
                 </div>
 
-                {/* Balance check */}
+                {/* Balance preview card */}
                 {selectedClient && parsedAmount > 0 && (
                   <div className={cn(
-                    "rounded-lg px-4 py-2.5 text-sm flex items-center gap-2",
-                    balanceOk ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                    "rounded-lg border px-4 py-3 text-sm",
+                    balanceSufficient ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"
                   )}>
-                    <span>{balanceOk ? "✓" : "⚠"}</span>
-                    <span>
-                      {balanceOk
-                        ? `Sufficient balance (${selectedClient.wallet_balance.toFixed(2)} ${selectedClient.billing_currency})`
-                        : `Insufficient funds — balance: ${selectedClient.wallet_balance.toFixed(2)} ${selectedClient.billing_currency}`}
-                    </span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-gray-600">
+                        <span>Current Balance</span>
+                        <span className="font-mono">{selectedClient.wallet_balance.toFixed(2)} {selectedClient.billing_currency}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Top Up Amount</span>
+                        <span className="font-mono">−{parsedAmount.toFixed(2)} {currency}</span>
+                      </div>
+                      {feeRate > 0 && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Top Up Fee ({feeRate}%)</span>
+                          <span className="font-mono">−{feeAmount.toFixed(2)} {currency}</span>
+                        </div>
+                      )}
+                      <div className={cn("flex justify-between border-t pt-1.5 mt-1 font-semibold", balanceSufficient ? "border-emerald-200" : "border-red-200")}>
+                        <span className="text-gray-700">New Balance After</span>
+                        <span className={cn("font-mono", newBalance < 0 ? "text-red-600" : "text-gray-900")}>
+                          {newBalance.toFixed(2)} {selectedClient.billing_currency}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -223,10 +261,10 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !clientId || !adAccountId || !parsedAmount}
+                  disabled={loading || !clientId || !adAccountId || !parsedAmount || !!isDisabledAccount}
                   className="rounded-lg bg-[hsl(236,85%,55%)] px-4 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Creating…" : balanceInsufficient ? "Create (Insufficient Funds)" : "Create Request"}
+                  {loading ? "Creating…" : balanceInsufficient ? "Create Top Up (Insufficient Funds)" : "Create Top Up"}
                 </button>
               </div>
             </form>

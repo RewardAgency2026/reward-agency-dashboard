@@ -106,11 +106,18 @@ export async function POST(req: NextRequest) {
 
   // Verify ad account exists and belongs to client
   const [adAccount] = await db
-    .select({ id: ad_accounts.id, supplier_id: ad_accounts.supplier_id })
+    .select({ id: ad_accounts.id, supplier_id: ad_accounts.supplier_id, status: ad_accounts.status })
     .from(ad_accounts)
     .where(and(eq(ad_accounts.id, ad_account_id), eq(ad_accounts.client_id, client_id)))
     .limit(1);
   if (!adAccount) return NextResponse.json({ error: "Ad account not found for this client" }, { status: 404 });
+
+  if (adAccount.status === "disabled") {
+    return NextResponse.json({ error: "This ad account is disabled and cannot receive top ups." }, { status: 400 });
+  }
+  if (adAccount.status === "deleted") {
+    return NextResponse.json({ error: "This ad account has been deleted and cannot receive top ups." }, { status: 400 });
+  }
 
   // Calculate wallet balance to auto-set status
   const wallet_balance = await calculateWalletBalance(client_id, client.balance_model);

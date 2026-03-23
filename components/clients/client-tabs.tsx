@@ -77,6 +77,7 @@ interface AdAccountOption {
   client_id: string;
   platform: string;
   account_name: string;
+  top_up_fee_rate: string;
   status: string;
 }
 
@@ -117,8 +118,8 @@ const STATUS_BADGE: Record<string, string> = {
 
 const AD_ACCOUNT_STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  disabled: "bg-amber-50 text-amber-700 border border-amber-200",
-  deleted: "bg-red-50 text-red-600 border border-red-200",
+  disabled: "bg-red-50 text-red-600 border border-red-200",
+  deleted: "bg-red-100 text-red-900 border border-red-300 line-through",
 };
 
 const PLATFORM_LABELS: Record<keyof PlatformFees, string> = {

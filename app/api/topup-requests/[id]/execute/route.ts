@@ -54,6 +54,7 @@ export async function POST(
       id: ad_accounts.id,
       platform: ad_accounts.platform,
       top_up_fee_rate: ad_accounts.top_up_fee_rate,
+      status: ad_accounts.status,
       supplier_id: ad_accounts.supplier_id,
       supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
     })
@@ -61,6 +62,12 @@ export async function POST(
     .where(eq(ad_accounts.id, request.ad_account_id))
     .limit(1);
   if (!adAccount) return NextResponse.json({ error: "Ad account not found" }, { status: 404 });
+  if (adAccount.status === "disabled") {
+    return NextResponse.json({ error: "This ad account is disabled and cannot receive top ups." }, { status: 400 });
+  }
+  if (adAccount.status === "deleted") {
+    return NextResponse.json({ error: "This ad account has been deleted and cannot receive top ups." }, { status: 400 });
+  }
 
   // Look up supplier fee rate for this sub-account + platform
   let supplierFeeRate = 0;

@@ -82,10 +82,10 @@ export default async function TopupRequestsPage() {
         client_id: ad_accounts.client_id,
         platform: ad_accounts.platform,
         account_name: ad_accounts.account_name,
+        top_up_fee_rate: ad_accounts.top_up_fee_rate,
         status: ad_accounts.status,
       })
-      .from(ad_accounts)
-      .where(eq(ad_accounts.status, "active")),
+      .from(ad_accounts),
   ]);
 
   // Attach wallet balances to clients for NewRequestModal
