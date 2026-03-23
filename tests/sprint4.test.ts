@@ -131,6 +131,29 @@ describe("POST /api/suppliers — create supplier", () => {
     const { status } = await api("POST", "/api/suppliers", { contact_email: "x@x.com" });
     assert.equal(status, 400);
   });
+
+  it("creates supplier then sets platform fees in one flow (modal simulation)", async () => {
+    // Simulate what the modal does: create supplier, then POST fees for filled platforms
+    const feeRes = await api("POST", "/api/suppliers/" + testSupplierId + "/platform-fees", {
+      platform: "meta", fee_rate: 3.5,
+    });
+    assert.equal(feeRes.status, 200);
+
+    const feeRes2 = await api("POST", "/api/suppliers/" + testSupplierId + "/platform-fees", {
+      platform: "google", fee_rate: 2.0,
+    });
+    assert.equal(feeRes2.status, 200);
+
+    // Verify both fees appear on the supplier detail
+    const { status, data } = await api("GET", `/api/suppliers/${testSupplierId}`);
+    assert.equal(status, 200);
+    const metaFee = data.platform_fees.find((f: { platform: string }) => f.platform === "meta");
+    const googleFee = data.platform_fees.find((f: { platform: string }) => f.platform === "google");
+    assert.ok(metaFee, "meta fee missing");
+    assert.equal(parseFloat(metaFee.fee_rate), 3.5);
+    assert.ok(googleFee, "google fee missing");
+    assert.equal(parseFloat(googleFee.fee_rate), 2.0);
+  });
 });
 
 describe("GET /api/suppliers — list suppliers", () => {
