@@ -184,10 +184,11 @@ To be added in Sprint 4.
 |--------|--------|-------|
 | Sprint 1 | ✅ Done | Next.js init, 13-table schema, Drizzle migrations, NextAuth v5, seed users, GitHub push |
 | Sprint 2 | ✅ Done | Agency sidebar (dark navy), all nav items, route groups (agency/client/affiliate), placeholder pages |
-| Sprint 3 | ✅ Done | Clients CRUD, wallet balance, credit/withdraw/refund, platform fees, setup config, notes, 22/22 tests |
-| Sprint 4 | ✅ Done | Suppliers + Ad Accounts module (sub-account hierarchy, 21/21 tests) |
-| Sprint 5 | ✅ Done | Top Ups module (renamed from "Top-Up Requests" in UI, 16/16 tests) |
-| Sprint 6 | 🔄 Next | Transactions (full ledger view, filters) |
+| Sprint 3 | ✅ Done | Clients CRUD, wallet balance, credit/withdraw/refund, setup rental, platform fees, notes, client code editable, 22+ tests |
+| Sprint 4 | ✅ Done | Suppliers + Ad Accounts (parent/sub-supplier hierarchy, platform fees, KPIs, ad account status active/disabled/deleted, 21 tests) |
+| Sprint 5 | ✅ Done | Top Ups module (create, execute, reject, fee breakdown preview, platform icons, modal latency fixes, sidebar badge counter, 16 tests) |
+| Fee model | ✅ Done | top_up_fee_rate auto-derived from client_platform_fees; supplier_fee_rate from sub-supplier; both read-only on ad account |
+| Sprint 6 | 🔄 Next | Transactions page (full history, filters, export), Dashboard KPIs, P&L Report, Invoices |
 | Sprint 7 | ⏳ | Affiliates module (commissions, referrals) |
 | Sprint 8 | ⏳ | P&L + Invoices |
 | Sprint 9 | ⏳ | Client portal (balance, ad accounts, transactions, top-up requests) |
@@ -198,25 +199,11 @@ To be added in Sprint 4.
 
 ## Upcoming Sprint Plans
 
-### Sprint 4 — Suppliers + Ad Accounts
-- Suppliers CRUD (`/suppliers`): name, contact email, status, platform fee rates per platform
-- Ad Accounts CRUD (`/ad-accounts`): link client + supplier, platform, account ID/name, top_up_fee_rate
-- Ad account status management (active/paused/closed)
-- API: GET/POST /api/suppliers, GET/PATCH /api/suppliers/[id]
-- API: GET/POST /api/ad-accounts, GET/PATCH /api/ad-accounts/[id]
-- Tests: sprint4.test.ts
-
-### Sprint 5 — Top Ups (UI label; API stays /api/topup-requests)
-- Agency creates top-up on behalf of client; auto-status approved/insufficient_funds
-- Execute: re-checks balance, stores fee snapshots; force=true bypasses balance check
-- Status flow: pending → approved → executed | rejected | insufficient_funds
-- Sidebar shows red badge with count of pending+approved+insufficient_funds requests
-- API: POST /api/topup-requests, POST /api/topup-requests/[id]/execute|reject, GET /api/topup-requests/count
-
-### Sprint 6 — Transactions
-- Full transaction ledger with filters (type, date range, client)
-- Transaction detail view
-- Spend record import (bulk or manual)
+### Sprint 6 — Transactions + Dashboard + P&L + Invoices
+- Transactions page: full ledger with filters (type, date range, client), export
+- Dashboard KPIs: wallet balances, commissions, margins, charts
+- P&L Report: revenue (top-up fees + setup fees) vs costs (supplier fees + setup costs)
+- Invoices: generate INV-YYYY-NNNN, status management (draft/sent/paid/overdue)
 
 ### Sprint 7 — Affiliates Module
 - Affiliate CRUD, password setup, commission rate
