@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { LogOut } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/portal/dashboard" },
@@ -19,17 +21,14 @@ export function ClientTopNav({ userName }: Props) {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <div className="flex items-center justify-between px-6 h-14 max-w-7xl mx-auto">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-md text-white text-xs font-bold"
-            style={{ backgroundColor: "hsl(236, 85%, 55%)" }}
-          >
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[hsl(236,85%,55%)] text-xs font-bold text-white">
             R
           </div>
-          <span className="font-semibold text-sm text-gray-900">Reward Agency</span>
+          <span className="text-sm font-semibold text-gray-900">Reward Agency</span>
         </div>
 
         {/* Nav links */}
@@ -40,11 +39,12 @@ export function ClientTopNav({ userName }: Props) {
               <Link
                 key={href}
                 href={href}
-                className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-                style={{
-                  color: isActive ? "hsl(236, 85%, 55%)" : "hsl(215, 16%, 47%)",
-                  backgroundColor: isActive ? "hsl(236, 85%, 97%)" : "transparent",
-                }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-[hsl(236,85%,95%)] text-[hsl(236,85%,55%)]"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                )}
               >
                 {label}
               </Link>
@@ -54,11 +54,12 @@ export function ClientTopNav({ userName }: Props) {
 
         {/* User + sign out */}
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600 font-medium">{userName}</span>
+          <span className="text-sm font-medium text-gray-700">{userName}</span>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700"
           >
+            <LogOut size={14} />
             Sign out
           </button>
         </div>

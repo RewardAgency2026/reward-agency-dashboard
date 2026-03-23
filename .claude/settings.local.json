@@ -13,7 +13,9 @@
       "Bash(git remote:*)",
       "Bash(git branch:*)",
       "Bash(git push:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(git commit:*)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }

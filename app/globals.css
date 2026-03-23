@@ -3,23 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --sidebar-bg: hsl(222, 47%, 11%);
-  --sidebar-active: hsl(236, 85%, 55%);
-  --sidebar-hover: hsl(222, 47%, 16%);
-  --sidebar-text: hsl(215, 20%, 65%);
-  --sidebar-text-active: hsl(0, 0%, 100%);
-  --sidebar-border: hsl(222, 47%, 17%);
   --sidebar-width: 240px;
 }
 
 body {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
-  background: hsl(220, 20%, 97%);
-  color: hsl(222, 47%, 11%);
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  background-color: #f4f6f9;
+  color: #0f172a;
 }
