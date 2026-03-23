@@ -10,7 +10,6 @@ const patchSchema = z.object({
   account_id: z.string().min(1).optional(),
   account_name: z.string().min(1).optional(),
   supplier_sub_account_id: z.string().uuid().optional(),
-  top_up_fee_rate: z.number().min(0).max(100).optional(),
   status: z.enum(["active", "disabled", "deleted"]).optional(),
 });
 
@@ -69,11 +68,19 @@ export async function PATCH(
   }
 
   const d = parsed.data;
+
+  // Fetch the existing ad account to get client_id
+  const [existing] = await db
+    .select({ id: ad_accounts.id, client_id: ad_accounts.client_id })
+    .from(ad_accounts)
+    .where(eq(ad_accounts.id, params.id))
+    .limit(1);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const updates: Record<string, unknown> = {};
   if (d.platform !== undefined) updates.platform = d.platform;
   if (d.account_id !== undefined) updates.account_id = d.account_id;
   if (d.account_name !== undefined) updates.account_name = d.account_name;
-  if (d.top_up_fee_rate !== undefined) updates.top_up_fee_rate = String(d.top_up_fee_rate);
   if (d.status !== undefined) updates.status = d.status;
 
   // If changing sub-account, also update supplier_id from parent
@@ -86,6 +93,19 @@ export async function PATCH(
     if (!subAccount) return NextResponse.json({ error: "Sub-account not found" }, { status: 404 });
     updates.supplier_sub_account_id = d.supplier_sub_account_id;
     updates.supplier_id = subAccount.supplier_id;
+  }
+
+  // If platform is changing, recalculate top_up_fee_rate from client's commission rates
+  if (d.platform !== undefined) {
+    const [client] = await db
+      .select({ client_platform_fees: clients.client_platform_fees })
+      .from(clients)
+      .where(eq(clients.id, existing.client_id))
+      .limit(1);
+    if (client) {
+      const platformFees = client.client_platform_fees as Record<string, number> | null;
+      updates.top_up_fee_rate = String(platformFees?.[d.platform] ?? 0);
+    }
   }
 
   if (Object.keys(updates).length === 0) {

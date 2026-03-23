@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type PlatformFees = { meta?: number; google?: number; tiktok?: number; snapchat?: number; pinterest?: number };
 
@@ -52,7 +53,6 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
   const [platform, setPlatform] = useState("");
   const [accountId, setAccountId] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [feeRate, setFeeRate] = useState("");
 
   // Sub-accounts filtered by selected supplier
   const selectedSupplier = suppliers.find((s) => s.id === supplierId);
@@ -62,37 +62,32 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
   const selectedSubAccount = subAccounts.find((sa) => sa.id === subAccountId);
   const availablePlatforms = useMemo(() => {
     if (!subAccountId || !selectedSubAccount) return PLATFORMS;
-    return PLATFORMS.filter(
-      (p) => (selectedSubAccount.platform_fees?.[p] ?? 0) > 0
-    );
+    return PLATFORMS.filter((p) => (selectedSubAccount.platform_fees?.[p] ?? 0) > 0);
   }, [subAccountId, selectedSubAccount]);
   const hasNoFees = subAccountId && availablePlatforms.length === 0;
+
+  // Fee preview
+  const selectedClient = clients.find((c) => c.id === clientId);
+  const clientCommission = platform && selectedClient
+    ? (selectedClient.client_platform_fees?.[platform as keyof PlatformFees] ?? 0)
+    : null;
+  const providerFee = platform && selectedSubAccount
+    ? (selectedSubAccount.platform_fees?.[platform as keyof PlatformFees] ?? 0)
+    : null;
+  const margin = clientCommission !== null && providerFee !== null
+    ? clientCommission - providerFee
+    : null;
 
   // Reset sub-account + platform when supplier changes
   useEffect(() => {
     setSubAccountId("");
     setPlatform("");
-    setFeeRate("");
   }, [supplierId]);
 
-  // Reset platform + fee when sub-account changes
+  // Reset platform when sub-account changes
   useEffect(() => {
     setPlatform("");
-    setFeeRate("");
   }, [subAccountId]);
-
-  // Auto-suggest fee rate from sub-account's platform fees
-  useEffect(() => {
-    if (!subAccountId || !platform) return;
-    const suggested = selectedSubAccount?.platform_fees?.[platform as keyof PlatformFees];
-    if (suggested !== undefined && suggested > 0) { setFeeRate(String(suggested)); return; }
-    // Fallback: try client platform fees
-    if (clientId) {
-      const client = clients.find((c) => c.id === clientId);
-      const clientSuggested = client?.client_platform_fees?.[platform as keyof PlatformFees];
-      if (clientSuggested !== undefined) setFeeRate(String(clientSuggested));
-    }
-  }, [subAccountId, platform, selectedSubAccount, clientId, clients]);
 
   function reset() {
     setClientId(prefillClientId ?? "");
@@ -101,7 +96,6 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
     setPlatform("");
     setAccountId("");
     setAccountName("");
-    setFeeRate("");
     setError(null);
   }
 
@@ -119,7 +113,6 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
           platform,
           account_id: accountId,
           account_name: accountName,
-          top_up_fee_rate: parseFloat(feeRate) || 0,
         }),
       });
       const data = await res.json();
@@ -178,7 +171,7 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                   </select>
                 </div>
 
-                {/* Sub-account — filtered by supplier */}
+                {/* Sub-account */}
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Sub-Account *</label>
                   <select required value={subAccountId} onChange={(e) => setSubAccountId(e.target.value)} className={inputCls} disabled={!supplierId}>
@@ -189,7 +182,8 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                   </select>
                 </div>
 
-                <div>
+                {/* Platform */}
+                <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Platform *</label>
                   {hasNoFees ? (
                     <p className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
@@ -210,20 +204,6 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Top-Up Fee Rate (%)</label>
-                  <input
-                    type="number" min="0" max="100" step="0.01"
-                    value={feeRate}
-                    onChange={(e) => setFeeRate(e.target.value)}
-                    placeholder="0.00"
-                    className={inputCls}
-                  />
-                  {feeRate && subAccountId && platform && (
-                    <p className="mt-1 text-xs text-gray-400">Auto-suggested from sub-account fees</p>
-                  )}
-                </div>
-
-                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Account ID *</label>
                   <input required value={accountId} onChange={(e) => setAccountId(e.target.value)}
                     placeholder="e.g. act_123456789" className={inputCls} />
@@ -235,6 +215,35 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
                     placeholder="e.g. Main Campaign" className={inputCls} />
                 </div>
               </div>
+
+              {/* Fee preview */}
+              {platform && clientId && (
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Client Commission</span>
+                    <span className={cn("font-mono font-medium", clientCommission !== null && clientCommission > 0 ? "text-emerald-700" : "text-gray-400")}>
+                      {clientCommission !== null ? (clientCommission > 0 ? `${clientCommission}%` : "— (not set)") : "—"}
+                    </span>
+                  </div>
+                  {selectedSubAccount && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Provider Fee <span className="text-gray-400">({selectedSubAccount.name})</span></span>
+                      <span className={cn("font-mono font-medium", providerFee !== null && providerFee > 0 ? "text-red-600" : "text-gray-400")}>
+                        {providerFee !== null ? (providerFee > 0 ? `${providerFee}%` : "—") : "—"}
+                      </span>
+                    </div>
+                  )}
+                  {margin !== null && (
+                    <div className={cn("flex justify-between border-t border-gray-200 pt-1.5 font-semibold", margin >= 0 ? "text-gray-800" : "text-red-600")}>
+                      <span>Gross Margin</span>
+                      <span className="font-mono">{margin > 0 ? `${margin.toFixed(2)}%` : margin === 0 ? "0%" : `−${Math.abs(margin).toFixed(2)}%`}</span>
+                    </div>
+                  )}
+                  {clientCommission === 0 && (
+                    <p className="text-amber-600 mt-1">No commission rate set for this platform on the client — update client settings first.</p>
+                  )}
+                </div>
+              )}
 
               {error && <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
 

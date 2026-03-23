@@ -167,6 +167,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
     platform: a.platform,
     account_name: a.account_name,
     top_up_fee_rate: a.top_up_fee_rate,
+    supplier_fee_rate: a.supplier_sub_account_id
+      ? (String(feesBySubAccount.get(a.supplier_sub_account_id)?.[a.platform] ?? "") || null)
+      : null,
     status: a.status,
   }));
 

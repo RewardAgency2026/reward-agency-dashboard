@@ -11,7 +11,6 @@ const createSchema = z.object({
   platform: z.enum(["meta", "google", "tiktok", "snapchat", "pinterest"]),
   account_id: z.string().min(1, "Account ID is required"),
   account_name: z.string().min(1, "Account name is required"),
-  top_up_fee_rate: z.number().min(0).max(100),
 });
 
 export async function GET(req: NextRequest) {
@@ -75,13 +74,16 @@ export async function POST(req: NextRequest) {
 
   const d = parsed.data;
 
-  // Verify client exists
+  // Fetch client and derive commission rate from platform fees
   const [client] = await db
-    .select({ id: clients.id })
+    .select({ id: clients.id, client_platform_fees: clients.client_platform_fees })
     .from(clients)
     .where(eq(clients.id, d.client_id))
     .limit(1);
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+  const platformFees = client.client_platform_fees as Record<string, number> | null;
+  const top_up_fee_rate = platformFees?.[d.platform] ?? 0;
 
   // Verify sub-account exists and derive supplier_id
   const [subAccount] = await db
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest) {
       platform: d.platform,
       account_id: d.account_id,
       account_name: d.account_name,
-      top_up_fee_rate: String(d.top_up_fee_rate),
+      top_up_fee_rate: String(top_up_fee_rate),
     })
     .returning();
 

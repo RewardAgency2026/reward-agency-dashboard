@@ -19,6 +19,7 @@ interface AdAccountOption {
   platform: string;
   account_name: string;
   top_up_fee_rate: string;
+  supplier_fee_rate: string | null;
   status: string;
 }
 
@@ -59,11 +60,18 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
   const selectedAdAccount = useMemo(() => adAccounts.find((a) => a.id === adAccountId), [adAccounts, adAccountId]);
 
   const parsedAmount = parseFloat(amount) || 0;
-  const feeRate = selectedAdAccount ? parseFloat(selectedAdAccount.top_up_fee_rate) : 0;
-  const feeAmount = parsedAmount > 0 ? parsedAmount * (feeRate / 100) : 0;
-  const totalDeducted = parsedAmount + feeAmount;
-  const newBalance = selectedClient ? selectedClient.wallet_balance - totalDeducted : 0;
-  const balanceSufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= totalDeducted;
+
+  // Fee calculations
+  const commissionRate = selectedAdAccount ? parseFloat(selectedAdAccount.top_up_fee_rate) : 0;
+  const commissionAmount = parsedAmount > 0 ? parsedAmount * (commissionRate / 100) : 0;
+  const providerRate = selectedAdAccount?.supplier_fee_rate ? parseFloat(selectedAdAccount.supplier_fee_rate) : 0;
+  const providerAmount = parsedAmount > 0 ? parsedAmount * (providerRate / 100) : 0;
+  const grossMarginAmount = commissionAmount - providerAmount;
+  const grossMarginRate = commissionRate - providerRate;
+
+  // Balance check: only the top-up amount affects wallet balance (not fees)
+  const newBalance = selectedClient ? selectedClient.wallet_balance - parsedAmount : 0;
+  const balanceSufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= parsedAmount;
   const balanceInsufficient = selectedClient && parsedAmount > 0 && !balanceSufficient;
 
   const isDisabledAccount = selectedAdAccount && selectedAdAccount.status !== "active";
@@ -205,12 +213,13 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                   </div>
                 </div>
 
-                {/* Balance preview card */}
+                {/* Balance + fee preview */}
                 {selectedClient && parsedAmount > 0 && (
                   <div className={cn(
-                    "rounded-lg border px-4 py-3 text-sm",
+                    "rounded-lg border px-4 py-3 text-sm space-y-1.5",
                     balanceSufficient ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"
                   )}>
+                    {/* Balance section */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-gray-600">
                         <span>Current Balance</span>
@@ -220,19 +229,48 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                         <span>Top Up Amount</span>
                         <span className="font-mono">−{parsedAmount.toFixed(2)} {currency}</span>
                       </div>
-                      {feeRate > 0 && (
-                        <div className="flex justify-between text-gray-600">
-                          <span>Top Up Fee ({feeRate}%)</span>
-                          <span className="font-mono">−{feeAmount.toFixed(2)} {currency}</span>
-                        </div>
-                      )}
-                      <div className={cn("flex justify-between border-t pt-1.5 mt-1 font-semibold", balanceSufficient ? "border-emerald-200" : "border-red-200")}>
+                      <div className={cn(
+                        "flex justify-between border-t pt-1.5 font-semibold",
+                        balanceSufficient ? "border-emerald-200" : "border-red-200"
+                      )}>
                         <span className="text-gray-700">New Balance After</span>
                         <span className={cn("font-mono", newBalance < 0 ? "text-red-600" : "text-gray-900")}>
                           {newBalance.toFixed(2)} {selectedClient.billing_currency}
                         </span>
                       </div>
                     </div>
+
+                    {/* Fee breakdown */}
+                    {selectedAdAccount && (commissionRate > 0 || providerRate > 0) && (
+                      <div className={cn(
+                        "space-y-1 border-t pt-2 mt-1",
+                        balanceSufficient ? "border-emerald-200" : "border-red-200"
+                      )}>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Internal Fee Breakdown</p>
+                        {commissionRate > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Client Commission ({commissionRate}%)</span>
+                            <span className="font-mono text-emerald-700">+{commissionAmount.toFixed(2)} {currency}</span>
+                          </div>
+                        )}
+                        {providerRate > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Provider Fee ({providerRate}%)</span>
+                            <span className="font-mono text-red-600">−{providerAmount.toFixed(2)} {currency}</span>
+                          </div>
+                        )}
+                        {(commissionRate > 0 || providerRate > 0) && (
+                          <div className={cn(
+                            "flex justify-between text-xs font-semibold border-t pt-1",
+                            balanceSufficient ? "border-emerald-200" : "border-red-200",
+                            grossMarginAmount >= 0 ? "text-gray-800" : "text-red-600"
+                          )}>
+                            <span>Gross Margin ({grossMarginRate.toFixed(2)}%)</span>
+                            <span className="font-mono">{grossMarginAmount >= 0 ? "" : "−"}{Math.abs(grossMarginAmount).toFixed(2)} {currency}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

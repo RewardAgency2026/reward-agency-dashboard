@@ -78,6 +78,7 @@ interface AdAccountOption {
   platform: string;
   account_name: string;
   top_up_fee_rate: string;
+  supplier_fee_rate: string | null;
   status: string;
 }
 
@@ -164,7 +165,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
         <div className="flex items-center gap-2">
           <WithdrawModal clientId={client.id} walletBalance={client.wallet_balance} canWithdraw={canCredit} />
           <CreditModal clientId={client.id} cryptoFeeRate={parseFloat(client.crypto_fee_rate)} canCredit={canCredit} />
-          <EditClientModal client={client} affiliates={affiliates} />
+          <EditClientModal client={{ ...client, client_platform_fees: client.client_platform_fees as PlatformFees | null }} affiliates={affiliates} />
         </div>
       </div>
 
@@ -266,25 +267,24 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
             </div>
           )}
 
-          {/* Platform fees */}
-          {client.client_platform_fees && (
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Platform Top-Up Fees</h3>
-              <div className="grid grid-cols-5 gap-4">
-                {(Object.keys(PLATFORM_LABELS) as (keyof PlatformFees)[]).map((p) => {
-                  const rate = client.client_platform_fees![p] ?? 0;
-                  return (
-                    <div key={p} className="text-center">
-                      <p className="text-xs font-medium text-gray-500 mb-1">{PLATFORM_LABELS[p]}</p>
-                      <p className={cn("text-sm font-semibold font-mono", rate > 0 ? "text-gray-900" : "text-gray-400")}>
-                        {rate}%
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Commission Rates */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+            <h3 className="text-sm font-semibold text-blue-900 mb-1">Commission Rates</h3>
+            <p className="text-xs text-blue-600 mb-4">What this client pays per platform top up</p>
+            <div className="grid grid-cols-5 gap-4">
+              {(Object.keys(PLATFORM_LABELS) as (keyof PlatformFees)[]).map((p) => {
+                const rate = client.client_platform_fees?.[p] ?? 0;
+                return (
+                  <div key={p} className="text-center">
+                    <p className="text-xs font-medium text-blue-700 mb-1">{PLATFORM_LABELS[p]}</p>
+                    <p className={cn("text-sm font-semibold font-mono", rate > 0 ? "text-blue-900" : "text-blue-300")}>
+                      {rate > 0 ? `${rate}%` : "—"}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -308,7 +308,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    {["Platform", "Account", "Fee Rate", "Status"].map((h) => (
+                    {["Platform", "Account", "Commission Rate", "Status"].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                     ))}
                   </tr>

@@ -223,8 +223,9 @@ export function AddClientModal({ affiliates }: Props) {
               </div>
 
               {/* Platform fees */}
-              <div>
-                <p className="text-xs font-medium text-gray-600 mb-2">Platform Top-Up Fees (%)</p>
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-900 mb-0.5">Client Commission Rates (% per platform)</p>
+                <p className="text-xs text-blue-600 mb-3">These rates define what the client pays on each top up per platform</p>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
                   {PLATFORMS.map((p) => (
                     <div key={p}>

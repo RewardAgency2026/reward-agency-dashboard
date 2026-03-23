@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
 import { TopupRequestsTable, type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
 import { NewRequestModal } from "@/components/topup-requests/new-request-modal";
@@ -83,10 +83,21 @@ export default async function TopupRequestsPage() {
         platform: ad_accounts.platform,
         account_name: ad_accounts.account_name,
         top_up_fee_rate: ad_accounts.top_up_fee_rate,
+        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
         status: ad_accounts.status,
       })
       .from(ad_accounts),
   ]);
+
+  // Fetch supplier fees for ad account options
+  const subIds = [...new Set(adAccountRows.map((a) => a.supplier_sub_account_id).filter(Boolean))] as string[];
+  const supplierFeeRows = subIds.length > 0
+    ? await db.select().from(supplier_platform_fees).where(inArray(supplier_platform_fees.supplier_sub_account_id, subIds))
+    : [];
+  const supplierFeeMap = new Map<string, string>();
+  for (const f of supplierFeeRows) {
+    supplierFeeMap.set(`${f.supplier_sub_account_id}:${f.platform}`, f.fee_rate);
+  }
 
   // Attach wallet balances to clients for NewRequestModal
   const clientBalanceMap = await calculateWalletBalances(clientRows.map((c) => c.id));
@@ -95,12 +106,24 @@ export default async function TopupRequestsPage() {
     wallet_balance: balanceFromData(clientBalanceMap.get(c.id), c.balance_model),
   }));
 
+  const adAccountOptions = adAccountRows.map((a) => ({
+    id: a.id,
+    client_id: a.client_id,
+    platform: a.platform,
+    account_name: a.account_name,
+    top_up_fee_rate: a.top_up_fee_rate,
+    supplier_fee_rate: a.supplier_sub_account_id
+      ? (supplierFeeMap.get(`${a.supplier_sub_account_id}:${a.platform}`) ?? null)
+      : null,
+    status: a.status,
+  }));
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Top Ups</h1>
         {isAdmin && (
-          <NewRequestModal clients={clientOptions} adAccounts={adAccountRows} label="New Top-Up" />
+          <NewRequestModal clients={clientOptions} adAccounts={adAccountOptions} label="New Top-Up" />
         )}
       </div>
       <TopupRequestsTable requests={requestRows} isAdmin={isAdmin} />

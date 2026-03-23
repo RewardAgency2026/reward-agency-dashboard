@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SupplierOption {
   id: string;
   name: string;
-  sub_accounts: Array<{ id: string; name: string }>;
+  sub_accounts: Array<{ id: string; name: string; platform_fees: Record<string, number> }>;
 }
 
 interface AdAccount {
@@ -45,17 +46,24 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
     account_name: adAccount.account_name,
     supplier_id: adAccount.supplier_id,
     supplier_sub_account_id: adAccount.supplier_sub_account_id ?? "",
-    top_up_fee_rate: parseFloat(adAccount.top_up_fee_rate),
     status: adAccount.status,
   });
 
-  function set(field: string, value: string | number) {
+  function set(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
   // Sub-accounts filtered by selected supplier
   const selectedSupplier = suppliers.find((s) => s.id === form.supplier_id);
   const subAccounts = selectedSupplier?.sub_accounts ?? [];
+  const selectedSubAccount = subAccounts.find((sa) => sa.id === form.supplier_sub_account_id);
+
+  // Read-only fee info
+  const clientCommission = parseFloat(adAccount.top_up_fee_rate);
+  const providerFee = selectedSubAccount?.platform_fees?.[form.platform] ?? null;
+  const margin = providerFee !== null ? clientCommission - providerFee : null;
+
+  const platformChanged = form.platform !== adAccount.platform;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +74,6 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
         platform: form.platform,
         account_id: form.account_id,
         account_name: form.account_name,
-        top_up_fee_rate: form.top_up_fee_rate,
         status: form.status,
       };
       if (form.supplier_sub_account_id) {
@@ -114,13 +121,17 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
                   <select value={form.platform} onChange={(e) => set("platform", e.target.value)} className={inputCls}>
                     {PLATFORMS.map((p) => <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>)}
                   </select>
+                  {platformChanged && (
+                    <p className="mt-1 text-xs text-amber-600">Changing platform will recalculate the commission rate from client settings.</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Top-Up Fee Rate (%)</label>
-                  <input type="number" min="0" max="100" step="0.01"
-                    value={form.top_up_fee_rate}
-                    onChange={(e) => set("top_up_fee_rate", parseFloat(e.target.value) || 0)}
-                    className={inputCls} />
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                  <select value={form.status} onChange={(e) => set("status", e.target.value)} className={inputCls}>
+                    <option value="active">Active</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Account ID</label>
@@ -143,15 +154,32 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
                     {subAccounts.map((sa) => <option key={sa.id} value={sa.id}>{sa.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                  <select value={form.status} onChange={(e) => set("status", e.target.value)} className={inputCls}>
-                    <option value="active">Active</option>
-                    <option value="disabled">Disabled</option>
-                    <option value="deleted">Deleted</option>
-                  </select>
-                </div>
               </div>
+
+              {/* Read-only fee display */}
+              <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-xs space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Client Commission <span className="text-gray-400">(from client settings)</span></span>
+                  <span className={cn("font-mono font-medium", clientCommission > 0 ? "text-emerald-700" : "text-gray-400")}>
+                    {clientCommission > 0 ? `${clientCommission}%` : "— (not set)"}
+                  </span>
+                </div>
+                {providerFee !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Provider Fee <span className="text-gray-400">(from sub-account)</span></span>
+                    <span className={cn("font-mono font-medium", providerFee > 0 ? "text-red-600" : "text-gray-400")}>
+                      {providerFee > 0 ? `${providerFee}%` : "—"}
+                    </span>
+                  </div>
+                )}
+                {margin !== null && (
+                  <div className={cn("flex justify-between border-t border-gray-200 pt-1.5 font-semibold", margin >= 0 ? "text-gray-800" : "text-red-600")}>
+                    <span>Gross Margin</span>
+                    <span className="font-mono">{margin > 0 ? `${margin.toFixed(2)}%` : margin === 0 ? "0%" : `−${Math.abs(margin).toFixed(2)}%`}</span>
+                  </div>
+                )}
+              </div>
+
               {error && <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>

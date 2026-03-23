@@ -7,7 +7,7 @@ import { EditAdAccountModal } from "./edit-ad-account-modal";
 interface SupplierOption {
   id: string;
   name: string;
-  sub_accounts: Array<{ id: string; name: string }>;
+  sub_accounts: Array<{ id: string; name: string; platform_fees: Record<string, number> }>;
 }
 
 interface AdAccount {
@@ -96,7 +96,7 @@ export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {["Platform", "Account", "Supplier / Sub-Account", "Client", "Fee Rate", "Status", ...(isAdmin ? ["Actions"] : [])].map((h) => (
+                {["Platform", "Account", "Supplier / Sub-Account", "Client", "Commission Rate", "Status", ...(isAdmin ? ["Actions"] : [])].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
