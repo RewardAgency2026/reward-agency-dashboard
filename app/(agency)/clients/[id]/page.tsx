@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { clients, affiliates, transactions, ad_accounts } from "@/db/schema";
+import { clients, affiliates, transactions, ad_accounts, suppliers } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { calculateWalletBalance } from "@/lib/balance";
 import { ClientTabs } from "@/components/clients/client-tabs";
@@ -39,7 +39,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
   if (!clientRow) notFound();
 
-  const [wallet_balance, recentTxns, adAccountsList, affiliateList] = await Promise.all([
+  const [wallet_balance, recentTxns, adAccountsList, affiliateList, supplierList] = await Promise.all([
     calculateWalletBalance(clientRow.id, clientRow.balance_model),
 
     db
@@ -64,7 +64,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         platform: ad_accounts.platform,
         account_id: ad_accounts.account_id,
         account_name: ad_accounts.account_name,
+        top_up_fee_rate: ad_accounts.top_up_fee_rate,
         status: ad_accounts.status,
+        supplier_id: ad_accounts.supplier_id,
       })
       .from(ad_accounts)
       .where(eq(ad_accounts.client_id, params.id)),
@@ -73,6 +75,12 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       .select({ id: affiliates.id, name: affiliates.name, affiliate_code: affiliates.affiliate_code })
       .from(affiliates)
       .where(eq(affiliates.status, "active")),
+
+    db
+      .select({ id: suppliers.id, name: suppliers.name })
+      .from(suppliers)
+      .where(eq(suppliers.status, "active"))
+      .orderBy(suppliers.name),
   ]);
 
   const canCredit = ["admin", "team"].includes(session.user.role);
@@ -91,6 +99,6 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   };
 
   return (
-    <ClientTabs client={clientData} affiliates={affiliateList} canCredit={canCredit} />
+    <ClientTabs client={clientData} affiliates={affiliateList} suppliers={supplierList} canCredit={canCredit} />
   );
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { EditClientModal } from "./edit-client-modal";
 import { CreditModal } from "./credit-modal";
 import { WithdrawModal } from "./withdraw-modal";
+import { AddAdAccountModal } from "@/components/ad-accounts/add-ad-account-modal";
 
 interface Affiliate {
   id: string;
@@ -30,7 +31,14 @@ interface AdAccount {
   platform: string;
   account_id: string;
   account_name: string;
+  top_up_fee_rate: string;
   status: string;
+  supplier_id: string;
+}
+
+interface SupplierOption {
+  id: string;
+  name: string;
 }
 
 type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; pinterest: number };
@@ -63,6 +71,7 @@ interface Client {
 interface Props {
   client: Client;
   affiliates: Affiliate[];
+  suppliers: SupplierOption[];
   canCredit: boolean;
 }
 
@@ -106,7 +115,7 @@ function formatAmount(txn: Transaction) {
   return `${isDebit ? "−" : "+"}${val.toFixed(2)}`;
 }
 
-export function ClientTabs({ client, affiliates, canCredit }: Props) {
+export function ClientTabs({ client, affiliates, suppliers, canCredit }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]>("Overview");
 
   return (
@@ -260,34 +269,49 @@ export function ClientTabs({ client, affiliates, canCredit }: Props) {
 
       {/* Ad Accounts */}
       {tab === "Ad Accounts" && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          {client.ad_accounts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No ad accounts yet.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Platform", "Account ID", "Account Name", "Status"].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {client.ad_accounts.map((a) => (
-                  <tr key={a.id}>
-                    <td className="px-4 py-2 capitalize">{a.platform}</td>
-                    <td className="px-4 py-2 font-mono text-xs">{a.account_id}</td>
-                    <td className="px-4 py-2">{a.account_name}</td>
-                    <td className="px-4 py-2">
-                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", STATUS_BADGE[a.status] ?? "bg-gray-100 text-gray-500")}>
-                        {a.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div>
+          {canCredit && (
+            <div className="mb-4 flex justify-end">
+              <AddAdAccountModal
+                clients={[{ id: client.id, name: client.name, client_code: client.client_code, client_platform_fees: client.client_platform_fees }]}
+                suppliers={suppliers}
+                prefillClientId={client.id}
+                label="Add Ad Account"
+              />
+            </div>
           )}
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            {client.ad_accounts.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No ad accounts yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {["Platform", "Account", "Fee Rate", "Status"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {client.ad_accounts.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3 capitalize">{a.platform}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{a.account_name}</p>
+                        <p className="text-xs font-mono text-gray-400">{a.account_id}</p>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-sm">{parseFloat(a.top_up_fee_rate)}%</td>
+                      <td className="px-4 py-3">
+                        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", STATUS_BADGE[a.status] ?? "bg-gray-100 text-gray-500")}>
+                          {a.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
