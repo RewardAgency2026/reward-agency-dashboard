@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditClientModal } from "./edit-client-modal";
 import { CreditModal } from "./credit-modal";
@@ -109,6 +111,12 @@ export function ClientTabs({ client, affiliates, canCredit }: Props) {
 
   return (
     <div>
+      {/* Back link */}
+      <Link href="/clients" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-4">
+        <ArrowLeft size={13} />
+        Back to Clients
+      </Link>
+
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-center gap-3 flex-wrap">
