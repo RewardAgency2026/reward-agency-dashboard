@@ -6,7 +6,7 @@
   --sidebar-width: 240px;
 }
 
+html,
 body {
-  background-color: #f4f6f9;
-  color: #0f172a;
+  background-color: white;
 }

@@ -13,9 +13,9 @@ export default async function AffiliateLayout({
   if (session.user.userType !== "affiliate") redirect("/login");
 
   return (
-    <div className="flex min-h-screen bg-[#f4f6f9]">
+    <div className="flex min-h-screen bg-white">
       <AffiliateSidebar userName={session.user.name} />
-      <main className="ml-60 flex-1 p-8">{children}</main>
+      <main className="ml-60 flex-1 bg-white p-8">{children}</main>
     </div>
   );
 }
