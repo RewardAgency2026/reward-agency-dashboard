@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { clients, affiliates, transactions, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
-import { calculateWalletBalance } from "@/lib/balance";
+import { clients, affiliates, transactions, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees, topup_requests } from "@/db/schema";
+import { and, eq, desc, inArray } from "drizzle-orm";
+import { calculateWalletBalance, calculateWalletBalances, balanceFromData } from "@/lib/balance";
 import { ClientTabs } from "@/components/clients/client-tabs";
+import type { TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -113,6 +114,61 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
     sub_accounts: subsBySupplier.get(s.id) ?? [],
   }));
 
+  // Fetch topup requests for this client (with supplier/sub-account fee joins)
+  const topupRows = await db
+    .select({
+      id: topup_requests.id,
+      client_id: topup_requests.client_id,
+      ad_account_id: topup_requests.ad_account_id,
+      supplier_id: topup_requests.supplier_id,
+      amount: topup_requests.amount,
+      currency: topup_requests.currency,
+      status: topup_requests.status,
+      notes: topup_requests.notes,
+      executed_by: topup_requests.executed_by,
+      executed_at: topup_requests.executed_at,
+      created_at: topup_requests.created_at,
+      client_name: clients.name,
+      client_code: clients.client_code,
+      client_balance_model: clients.balance_model,
+      ad_account_platform: ad_accounts.platform,
+      ad_account_name: ad_accounts.account_name,
+      top_up_fee_rate: ad_accounts.top_up_fee_rate,
+      supplier_name: suppliers.name,
+      sub_account_name: supplier_sub_accounts.name,
+      supplier_fee_rate: supplier_platform_fees.fee_rate,
+    })
+    .from(topup_requests)
+    .leftJoin(clients, eq(topup_requests.client_id, clients.id))
+    .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
+    .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
+    .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))
+    .leftJoin(
+      supplier_platform_fees,
+      and(
+        eq(supplier_platform_fees.supplier_sub_account_id, supplier_sub_accounts.id),
+        eq(supplier_platform_fees.platform, ad_accounts.platform)
+      )
+    )
+    .where(eq(topup_requests.client_id, params.id))
+    .orderBy(desc(topup_requests.created_at));
+
+  const topupRequestRows: TopupRequestRow[] = topupRows.map((r) => ({
+    ...r,
+    executed_at: r.executed_at?.toISOString() ?? null,
+    created_at: r.created_at.toISOString(),
+    wallet_balance,
+  }));
+
+  // Ad account options for NewRequestModal in the client tab
+  const adAccountOptions = adAccountsList.map((a) => ({
+    id: a.id,
+    client_id: params.id,
+    platform: a.platform,
+    account_name: a.account_name,
+    status: a.status,
+  }));
+
   const canCredit = ["admin", "team"].includes(session.user.role);
 
   const clientData = {
@@ -129,6 +185,13 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   };
 
   return (
-    <ClientTabs client={clientData} affiliates={affiliateList} suppliers={suppliersWithSubs} canCredit={canCredit} />
+    <ClientTabs
+      client={clientData}
+      affiliates={affiliateList}
+      suppliers={suppliersWithSubs}
+      canCredit={canCredit}
+      topupRequests={topupRequestRows}
+      adAccountOptions={adAccountOptions}
+    />
   );
 }

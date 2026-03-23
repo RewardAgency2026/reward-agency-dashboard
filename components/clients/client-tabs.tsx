@@ -8,6 +8,8 @@ import { EditClientModal } from "./edit-client-modal";
 import { CreditModal } from "./credit-modal";
 import { WithdrawModal } from "./withdraw-modal";
 import { AddAdAccountModal } from "@/components/ad-accounts/add-ad-account-modal";
+import { TopupRequestsTable, type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
+import { NewRequestModal } from "@/components/topup-requests/new-request-modal";
 
 interface Affiliate {
   id: string;
@@ -70,11 +72,21 @@ interface Client {
   ad_accounts: AdAccount[];
 }
 
+interface AdAccountOption {
+  id: string;
+  client_id: string;
+  platform: string;
+  account_name: string;
+  status: string;
+}
+
 interface Props {
   client: Client;
   affiliates: Affiliate[];
   suppliers: SupplierOption[];
   canCredit: boolean;
+  topupRequests: TopupRequestRow[];
+  adAccountOptions: AdAccountOption[];
 }
 
 const TABS = ["Overview", "Ad Accounts", "Transactions", "Top-Up Requests"] as const;
@@ -117,7 +129,7 @@ function formatAmount(txn: Transaction) {
   return `${isDebit ? "−" : "+"}${val.toFixed(2)}`;
 }
 
-export function ClientTabs({ client, affiliates, suppliers, canCredit }: Props) {
+export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequests, adAccountOptions }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]>("Overview");
 
   return (
@@ -356,8 +368,29 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit }: Props) 
       )}
 
       {tab === "Top-Up Requests" && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-400 text-center py-8">Top-Up Requests — coming in Sprint 4.</p>
+        <div>
+          {canCredit && (
+            <div className="mb-4 flex justify-end">
+              <NewRequestModal
+                clients={[{
+                  id: client.id,
+                  name: client.name,
+                  client_code: client.client_code,
+                  balance_model: client.balance_model,
+                  billing_currency: client.billing_currency,
+                  wallet_balance: client.wallet_balance,
+                }]}
+                adAccounts={adAccountOptions}
+                prefillClientId={client.id}
+                label="New Request"
+              />
+            </div>
+          )}
+          <TopupRequestsTable
+            requests={topupRequests}
+            isAdmin={canCredit}
+            hideClientColumn
+          />
         </div>
       )}
     </div>
