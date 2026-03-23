@@ -203,7 +203,7 @@ export function SuppliersTable({ suppliers, isAdmin }: Props) {
                                         <td className="px-12 py-2 font-medium text-gray-800">{sa.name}</td>
                                         {PLATFORMS.map((p) => (
                                           <td key={p} className="px-4 py-2 font-mono text-gray-600">
-                                            {feeMap[p] != null ? `${feeMap[p].toFixed(2)}%` : <span className="text-gray-300">—</span>}
+                                            {feeMap[p] > 0 ? `${feeMap[p].toFixed(2)}%` : <span className="text-gray-300">—</span>}
                                           </td>
                                         ))}
                                         <td className="px-4 py-2">
