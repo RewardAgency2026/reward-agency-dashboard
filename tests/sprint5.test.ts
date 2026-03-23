@@ -108,13 +108,14 @@ before(async () => {
   });
   subAccountId = sub.id;
 
-  // Create rich client ($1000 balance)
+  // Create rich client ($1000 balance) with 5% meta commission
   const { data: richClient } = await api("POST", "/api/clients", {
     name: "Rich Sprint5 Client",
     email: TEST_CLIENT_EMAIL,
     company: "Sprint5 Corp",
     balance_model: "classic",
     billing_currency: "USD",
+    client_platform_fees: { meta: 5.0 },
   });
   richClientId = richClient.id;
 
@@ -125,13 +126,14 @@ before(async () => {
     is_crypto: false,
   });
 
-  // Create poor client ($10 balance)
+  // Create poor client ($10 balance) with 5% meta commission
   const { data: poorClient } = await api("POST", "/api/clients", {
     name: "Poor Sprint5 Client",
     email: TEST_CLIENT_EMAIL_POOR,
     company: "Sprint5 Poor Corp",
     balance_model: "classic",
     billing_currency: "USD",
+    client_platform_fees: { meta: 5.0 },
   });
   poorClientId = poorClient.id;
 

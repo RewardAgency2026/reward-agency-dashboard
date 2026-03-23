@@ -309,16 +309,16 @@ describe("GET /api/ad-accounts — filter and sub-account info", () => {
 });
 
 describe("PATCH /api/ad-accounts/[id] — update", () => {
-  it("updates status to paused", async () => {
-    const { status, data } = await api("PATCH", `/api/ad-accounts/${testAdAccountId}`, { status: "paused" });
+  it("updates status to disabled", async () => {
+    const { status, data } = await api("PATCH", `/api/ad-accounts/${testAdAccountId}`, { status: "disabled" });
     assert.equal(status, 200);
-    assert.equal(data.status, "paused");
+    assert.equal(data.status, "disabled");
   });
 
-  it("updates top_up_fee_rate", async () => {
-    const { status, data } = await api("PATCH", `/api/ad-accounts/${testAdAccountId}`, { top_up_fee_rate: 7.25 });
+  it("updates account_name", async () => {
+    const { status, data } = await api("PATCH", `/api/ad-accounts/${testAdAccountId}`, { account_name: "Updated Name" });
     assert.equal(status, 200);
-    assert.equal(parseFloat(data.top_up_fee_rate), 7.25);
+    assert.equal(data.account_name, "Updated Name");
   });
 });
 
