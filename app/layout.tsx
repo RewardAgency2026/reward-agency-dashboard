@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "Reward Agency Dashboard",
   description: "Financial management for Reward Agency",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
