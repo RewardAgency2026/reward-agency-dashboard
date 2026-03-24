@@ -9,10 +9,13 @@ export function PlatformIcon({ platform, size = 18 }: Props) {
   switch (platform) {
     case "meta":
       return (
-        <svg viewBox="0 0 24 24" width={s} height={s}>
-          <rect width="24" height="24" rx="4" fill="#0082FB"/>
-          <path fill="white" d="M12 8.5c-1.5 0-2.7.7-3.8 2.1C7.1 11.8 6 13.8 6 16c0 1.1.3 2 .9 2.6.6.6 1.3.9 2.1.9.8 0 1.5-.3 2.1-.8.4-.4.9-1 1.4-1.9.5.9 1 1.5 1.4 1.9.6.5 1.3.8 2.1.8.8 0 1.5-.3 2.1-.9.6-.6.9-1.5.9-2.6 0-2.2-1.1-4.2-2.2-5.4C15.7 9.2 14.5 8.5 12 8.5zm-1.2 7.8c-.4.6-.8 1-1.2 1.2-.3.2-.6.2-.9.2-.4 0-.7-.2-1-.5-.3-.3-.4-.8-.4-1.4 0-1.5.8-3.1 1.7-4.1.7-.8 1.4-1.2 2-1.2.5 0 .9.2 1.2.5-.8 1-2 2.8-1.4 5.3zm4.4 1.4c-.3.3-.6.5-1 .5-.3 0-.6-.1-.9-.2-.4-.2-.8-.6-1.2-1.2.6-2.5-.6-4.3-1.4-5.3.3-.3.7-.5 1.2-.5.6 0 1.3.4 2 1.2.9 1 1.7 2.6 1.7 4.1 0 .6-.1 1.1-.4 1.4z"/>
-        </svg>
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/800px-Meta_Platforms_Inc._logo.svg.png"
+          width={s}
+          height={s}
+          alt="Meta"
+          style={{ objectFit: "contain", borderRadius: 4 }}
+        />
       );
 
     case "google":
