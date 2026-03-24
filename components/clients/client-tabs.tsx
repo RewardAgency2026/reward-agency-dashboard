@@ -137,7 +137,7 @@ function formatAmount(txn: Transaction) {
   return `${isDebit ? "−" : "+"}${val.toFixed(2)}`;
 }
 
-export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequests, adAccountOptions }: Props) {
+export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequests }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]>("Overview");
 
   return (

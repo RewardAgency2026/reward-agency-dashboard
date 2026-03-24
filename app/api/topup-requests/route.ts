@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(topup_requests.created_at));
 
   // Batch compute wallet balances for all unique client IDs
-  const uniqueClientIds = [...new Set(rows.map((r) => r.client_id))];
+  const uniqueClientIds = Array.from(new Set(rows.map((r) => r.client_id)));
   const balanceMap = await calculateWalletBalances(uniqueClientIds);
 
   const result = rows.map((r) => ({

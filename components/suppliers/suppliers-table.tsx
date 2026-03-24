@@ -69,12 +69,12 @@ function getPlatformBadges(subAccounts: SubAccount[]) {
       if (parseFloat(f.fee_rate) > 0) seen.add(f.platform);
     }
   }
-  return [...seen];
+  return Array.from(seen);
 }
 
 const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
 
-export function SuppliersTable({ suppliers, isAdmin }: Props) {
+export function SuppliersTable({ suppliers }: Props) {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

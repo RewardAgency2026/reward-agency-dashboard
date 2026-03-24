@@ -11,7 +11,7 @@ const createSchema = z.object({
   contact_email: z.string().email("Invalid email").nullable().optional(),
 });
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

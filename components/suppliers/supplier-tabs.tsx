@@ -80,14 +80,6 @@ const PLATFORM_LABELS: Record<string, string> = {
   meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
 };
 
-const PLATFORM_BADGE: Record<string, string> = {
-  meta: "bg-blue-100 text-blue-700",
-  google: "bg-red-100 text-red-700",
-  tiktok: "bg-gray-900 text-white",
-  snapchat: "bg-yellow-100 text-yellow-800",
-  pinterest: "bg-rose-100 text-rose-700",
-};
-
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   inactive: "bg-gray-100 text-gray-500",
