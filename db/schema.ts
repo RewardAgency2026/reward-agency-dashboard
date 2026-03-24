@@ -223,6 +223,16 @@ export const affiliate_commissions = pgTable(
   })
 );
 
+// ─── audit_logs ───────────────────────────────────────────────────────────────
+export const audit_logs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  user_id: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  user_name: text("user_name").notNull(),
+  action: text("action").notNull(), // topup_executed | topup_rejected | topup_deleted | balance_credited | balance_withdrawn
+  details: jsonb("details").notNull().default(sql`'{}'::jsonb`),
+  created_at: timestamp("created_at").notNull().default(now()),
+});
+
 // ─── settings ─────────────────────────────────────────────────────────────────
 export const settings = pgTable("settings", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

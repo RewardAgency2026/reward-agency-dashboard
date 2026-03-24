@@ -16,7 +16,8 @@
       "Bash(npm run:*)",
       "Bash(git commit:*)",
       "Bash(pkill -f \"next dev\")",
-      "Bash(node -e \"console.log\\(process.version\\)\")"
+      "Bash(node -e \"console.log\\(process.version\\)\")",
+      "Bash(ls:*)"
     ]
   }
 }

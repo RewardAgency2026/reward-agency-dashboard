@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { calculateWalletBalance } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(
   _req: NextRequest,
@@ -60,4 +61,58 @@ export async function GET(
     created_at: row.created_at.toISOString(),
     wallet_balance,
   });
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
+
+  const [request] = await db
+    .select({
+      id: topup_requests.id,
+      status: topup_requests.status,
+      client_id: topup_requests.client_id,
+      amount: topup_requests.amount,
+      currency: topup_requests.currency,
+    })
+    .from(topup_requests)
+    .where(eq(topup_requests.id, params.id))
+    .limit(1);
+
+  if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (request.status === "executed") {
+    return NextResponse.json({ error: "Cannot delete an executed top-up request" }, { status: 409 });
+  }
+
+  await db.delete(topup_requests).where(eq(topup_requests.id, params.id));
+
+  // Audit log (fire-and-forget)
+  db.select({ name: clients.name })
+    .from(clients)
+    .where(eq(clients.id, request.client_id))
+    .limit(1)
+    .then(([c]) => {
+      logAudit({
+        userId: session.user.id,
+        userName: session.user.name ?? session.user.email ?? "Unknown",
+        action: "topup_deleted",
+        details: {
+          topup_request_id: params.id,
+          client_id: request.client_id,
+          client_name: c?.name ?? null,
+          amount: request.amount,
+          currency: request.currency,
+          previous_status: request.status,
+        },
+      });
+    })
+    .catch(() => {});
+
+  return NextResponse.json({ success: true });
 }

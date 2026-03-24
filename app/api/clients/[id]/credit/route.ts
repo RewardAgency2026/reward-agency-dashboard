@@ -5,6 +5,7 @@ import { clients, transactions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 const creditSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
@@ -42,6 +43,7 @@ export async function POST(
   const [client] = await db
     .select({
       id: clients.id,
+      name: clients.name,
       balance_model: clients.balance_model,
       crypto_fee_rate: clients.crypto_fee_rate,
     })
@@ -78,6 +80,21 @@ export async function POST(
     .returning();
 
   const wallet_balance = await calculateWalletBalance(client.id, client.balance_model);
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "balance_credited",
+    details: {
+      client_id: params.id,
+      client_name: client.name,
+      amount: netAmount,
+      currency,
+      is_crypto: isCrypto,
+      crypto_fee: cryptoFeeAmount,
+      description: description || null,
+    },
+  });
 
   return NextResponse.json({ transaction: txn, wallet_balance }, { status: 201 });
 }

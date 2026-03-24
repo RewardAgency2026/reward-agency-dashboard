@@ -72,6 +72,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectLoading, setRejectLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Sync with server data after background router.refresh()
   React.useEffect(() => {
@@ -101,6 +103,20 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
       router.refresh();
     } finally {
       setRejectLoading(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/topup-requests/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeletingId(null);
+        setRequests((prev) => prev.filter((r) => r.id !== id));
+        router.refresh();
+      }
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -197,20 +213,48 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                     <td className="px-4 py-3 text-xs text-gray-500">{formatDate(r.created_at)}</td>
                     {isAdmin && (
                       <td className="px-4 py-3">
-                        {canAct && (
-                          <div className="flex items-center gap-1.5">
-                            <ExecuteModal request={r} onSuccess={handleExecuted} />
-                            {rejectingId === r.id ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {canAct && (
+                            <>
+                              <ExecuteModal request={r} onSuccess={handleExecuted} />
+                              {rejectingId === r.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleReject(r.id)}
+                                    disabled={rejectLoading}
+                                    className="rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => setRejectingId(null)}
+                                    className="rounded px-2 py-1 text-xs font-medium border border-gray-200 text-gray-500 hover:bg-gray-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRejectingId(r.id)}
+                                  className="rounded px-2.5 py-1 text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {r.status !== "executed" && (
+                            deletingId === r.id ? (
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => handleReject(r.id)}
-                                  disabled={rejectLoading}
+                                  onClick={() => handleDelete(r.id)}
+                                  disabled={deleteLoading}
                                   className="rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
                                 >
-                                  Confirm
+                                  Confirm Delete
                                 </button>
                                 <button
-                                  onClick={() => setRejectingId(null)}
+                                  onClick={() => setDeletingId(null)}
                                   className="rounded px-2 py-1 text-xs font-medium border border-gray-200 text-gray-500 hover:bg-gray-50"
                                 >
                                   Cancel
@@ -218,14 +262,14 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                               </div>
                             ) : (
                               <button
-                                onClick={() => setRejectingId(r.id)}
-                                className="rounded px-2.5 py-1 text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                                onClick={() => setDeletingId(r.id)}
+                                className="rounded px-2.5 py-1 text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 transition-colors"
                               >
-                                Reject
+                                Delete
                               </button>
-                            )}
-                          </div>
-                        )}
+                            )
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

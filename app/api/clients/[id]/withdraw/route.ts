@@ -5,6 +5,7 @@ import { clients, transactions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 const withdrawSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
@@ -38,7 +39,7 @@ export async function POST(
   const { amount, type, description } = parsed.data;
 
   const [client] = await db
-    .select({ id: clients.id, balance_model: clients.balance_model })
+    .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model })
     .from(clients)
     .where(eq(clients.id, params.id))
     .limit(1);
@@ -58,6 +59,20 @@ export async function POST(
     .returning();
 
   const wallet_balance = await calculateWalletBalance(client.id, client.balance_model);
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "balance_withdrawn",
+    details: {
+      client_id: params.id,
+      client_name: client.name,
+      type,
+      amount,
+      currency: "USD",
+      description: description || null,
+    },
+  });
 
   return NextResponse.json({ transaction: txn, wallet_balance }, { status: 201 });
 }

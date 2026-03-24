@@ -5,6 +5,7 @@ import { topup_requests, clients, ad_accounts, supplier_platform_fees, transacti
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 const executeSchema = z.object({
   force: z.boolean().optional().default(false),
@@ -42,7 +43,7 @@ export async function POST(
 
   // Fetch client for balance model + platform fees (source of truth for commission rate)
   const [client] = await db
-    .select({ id: clients.id, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees })
+    .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees })
     .from(clients)
     .where(eq(clients.id, request.client_id))
     .limit(1);
@@ -130,6 +131,21 @@ export async function POST(
     .returning();
 
   const new_wallet_balance = await calculateWalletBalance(request.client_id, client.balance_model);
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "topup_executed",
+    details: {
+      topup_request_id: params.id,
+      client_id: request.client_id,
+      client_name: client.name,
+      amount: amount,
+      currency: request.currency,
+      ad_account_platform: adAccount.platform,
+      supplier_id: adAccount.supplier_id,
+    },
+  });
 
   return NextResponse.json({
     request: updatedRequest,
