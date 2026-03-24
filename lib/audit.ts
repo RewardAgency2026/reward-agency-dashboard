@@ -6,7 +6,11 @@ export type AuditAction =
   | "topup_rejected"
   | "topup_deleted"
   | "balance_credited"
-  | "balance_withdrawn";
+  | "balance_withdrawn"
+  | "client_created"
+  | "client_updated"
+  | "supplier_created"
+  | "supplier_updated";
 
 export async function logAudit(params: {
   userId: string;

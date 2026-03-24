@@ -72,7 +72,10 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectLoading, setRejectLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Delete modal state
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Sync with server data after background router.refresh()
@@ -111,7 +114,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
     try {
       const res = await fetch(`/api/topup-requests/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setDeletingId(null);
+        setDeleteModalId(null);
+        setDeleteConfirmText("");
         setRequests((prev) => prev.filter((r) => r.id !== id));
         router.refresh();
       }
@@ -120,8 +124,78 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
     }
   }
 
+  // Find the request being deleted for modal details
+  const deleteTarget = deleteModalId ? requests.find((r) => r.id === deleteModalId) ?? null : null;
+
   return (
     <div>
+      {/* Delete confirmation modal */}
+      <div className={deleteModalId ? "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" : "hidden"}>
+        <div className="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200 mx-4">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h3 className="text-base font-semibold text-gray-900">Delete Top-Up Request</h3>
+            <p className="text-sm text-gray-500 mt-0.5">This action cannot be undone.</p>
+          </div>
+          {deleteTarget && (
+            <div className="px-6 py-4 space-y-3">
+              <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Client</span>
+                  <span className="font-medium text-gray-900">{deleteTarget.client_name ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Ad Account</span>
+                  <span className="font-medium text-gray-900">{deleteTarget.ad_account_name ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Amount</span>
+                  <span className="font-medium text-gray-900">
+                    {parseFloat(deleteTarget.amount).toFixed(2)} {deleteTarget.currency}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Status</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE[deleteTarget.status] ?? "bg-gray-100 text-gray-500")}>
+                    {STATUS_LABELS[deleteTarget.status] ?? deleteTarget.status}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type <span className="font-mono font-bold">DELETE</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setDeleteModalId(null);
+                setDeleteConfirmText("");
+              }}
+              className="rounded-lg px-4 py-2 text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteModalId && handleDelete(deleteModalId)}
+              disabled={deleteConfirmText !== "DELETE" || deleteLoading}
+              className="rounded-lg px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleteLoading ? "Deleting..." : "Delete Request"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Filter tabs */}
       <div className="border-b border-gray-200 mb-4">
         <div className="flex gap-1 overflow-x-auto">
@@ -244,30 +318,15 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                             </>
                           )}
                           {r.status !== "executed" && (
-                            deletingId === r.id ? (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleDelete(r.id)}
-                                  disabled={deleteLoading}
-                                  className="rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                                >
-                                  Confirm Delete
-                                </button>
-                                <button
-                                  onClick={() => setDeletingId(null)}
-                                  className="rounded px-2 py-1 text-xs font-medium border border-gray-200 text-gray-500 hover:bg-gray-50"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setDeletingId(r.id)}
-                                className="rounded px-2.5 py-1 text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 transition-colors"
-                              >
-                                Delete
-                              </button>
-                            )
+                            <button
+                              onClick={() => {
+                                setDeleteModalId(r.id);
+                                setDeleteConfirmText("");
+                              }}
+                              className="rounded px-2.5 py-1 text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 transition-colors"
+                            >
+                              Delete
+                            </button>
                           )}
                         </div>
                       </td>

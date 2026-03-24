@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { suppliers, supplier_sub_accounts, supplier_platform_fees, ad_accounts, supplier_payments, transactions } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -143,6 +144,13 @@ export async function POST(req: NextRequest) {
     .insert(suppliers)
     .values({ name: parsed.data.name, contact_email: parsed.data.contact_email ?? null })
     .returning();
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "supplier_created",
+    details: { supplier_name: newSupplier.name },
+  });
 
   return NextResponse.json(newSupplier, { status: 201 });
 }

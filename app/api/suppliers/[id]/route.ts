@@ -7,6 +7,7 @@ import {
 } from "@/db/schema";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import { logAudit } from "@/lib/audit";
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -152,5 +153,13 @@ export async function PATCH(
     .returning();
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "supplier_updated",
+    details: { supplier_name: updated.name },
+  });
+
   return NextResponse.json(updated);
 }

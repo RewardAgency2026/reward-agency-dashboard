@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { clients, affiliates, transactions, ad_accounts } from "@/db/schema";
+import { clients, affiliates, transactions, ad_accounts, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 const platformFeesSchema = z.object({
   meta: z.number().min(0).max(100).default(0),
@@ -77,8 +78,10 @@ export async function GET(
       description: transactions.description,
       spend_date: transactions.spend_date,
       created_at: transactions.created_at,
+      created_by_name: users.name,
     })
     .from(transactions)
+    .leftJoin(users, eq(transactions.created_by, users.id))
     .where(eq(transactions.client_id, params.id))
     .orderBy(desc(transactions.created_at))
     .limit(10);
@@ -158,6 +161,16 @@ export async function PATCH(
     .returning();
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "client_updated",
+    details: {
+      client_name: updated.name,
+      client_code: updated.client_code,
+    },
+  });
 
   return NextResponse.json(updated);
 }

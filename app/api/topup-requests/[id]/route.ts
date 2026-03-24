@@ -87,7 +87,7 @@ export async function DELETE(
 
   if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (request.status === "executed") {
-    return NextResponse.json({ error: "Cannot delete an executed top-up request" }, { status: 409 });
+    return NextResponse.json({ error: "Executed top ups cannot be deleted. Use withdraw to reverse the transaction." }, { status: 400 });
   }
 
   await db.delete(topup_requests).where(eq(topup_requests.id, params.id));

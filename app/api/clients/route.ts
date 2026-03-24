@@ -6,6 +6,7 @@ import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import { generateClientCode } from "@/lib/client-code";
 import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
+import { logAudit } from "@/lib/audit";
 
 const platformFeesSchema = z.object({
   meta: z.number().min(0).max(100).default(0),
@@ -135,6 +136,17 @@ export async function POST(req: NextRequest) {
       client_platform_fees: d.client_platform_fees ?? null,
     })
     .returning();
+
+  logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "client_created",
+    details: {
+      client_name: newClient.name,
+      client_code: newClient.client_code,
+      balance_model: newClient.balance_model,
+    },
+  });
 
   return NextResponse.json(newClient, { status: 201 });
 }

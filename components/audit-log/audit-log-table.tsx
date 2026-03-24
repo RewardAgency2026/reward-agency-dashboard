@@ -20,6 +20,10 @@ const ACTION_LABELS: Record<string, string> = {
   topup_deleted: "Top Up Deleted",
   balance_credited: "Balance Credited",
   balance_withdrawn: "Balance Withdrawn",
+  client_created: "Client Created",
+  client_updated: "Client Updated",
+  supplier_created: "Supplier Created",
+  supplier_updated: "Supplier Updated",
 };
 
 const ACTION_BADGE: Record<string, string> = {
@@ -28,6 +32,10 @@ const ACTION_BADGE: Record<string, string> = {
   topup_deleted: "bg-red-50 text-red-700 border border-red-200",
   balance_credited: "bg-blue-50 text-blue-700 border border-blue-200",
   balance_withdrawn: "bg-orange-50 text-orange-700 border border-orange-200",
+  client_created: "bg-blue-50 text-blue-700 border border-blue-200",
+  client_updated: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+  supplier_created: "bg-purple-50 text-purple-700 border border-purple-200",
+  supplier_updated: "bg-violet-50 text-violet-700 border border-violet-200",
 };
 
 function formatDateTime(iso: string) {
@@ -41,6 +49,9 @@ function renderDetails(action: string, details: Record<string, unknown>): string
   const parts: string[] = [];
 
   if (details.client_name) parts.push(`Client: ${details.client_name}`);
+  if (details.client_code) parts.push(`Code: ${details.client_code}`);
+  if (details.supplier_name) parts.push(`Supplier: ${details.supplier_name}`);
+  if (details.balance_model) parts.push(`Model: ${details.balance_model}`);
   if (details.amount) {
     const amt = typeof details.amount === "string" ? parseFloat(details.amount) : Number(details.amount);
     parts.push(`Amount: ${amt.toFixed(2)} ${details.currency ?? ""}`);

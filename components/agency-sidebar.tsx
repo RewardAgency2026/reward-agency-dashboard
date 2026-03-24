@@ -15,7 +15,6 @@ import {
   Network,
   Settings,
   LogOut,
-  ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +30,6 @@ const NAV_ITEMS = [
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "P&L Report", href: "/pnl", icon: BarChart2 },
   { label: "Affiliates", href: "/affiliates", icon: Network },
-  { label: "Audit Log", href: "/audit-log", icon: ClipboardList },
   { label: "Settings", href: "/settings", icon: Settings },
 ] as const;
 
@@ -45,7 +43,6 @@ const PREFETCH_MAP: Record<string, { key: unknown[]; fn: () => Promise<unknown> 
   "/suppliers": { key: ["suppliers"], fn: () => fetch("/api/suppliers").then((r) => r.json()) },
   "/ad-accounts": { key: ["ad-accounts"], fn: () => fetch("/api/ad-accounts").then((r) => r.json()) },
   "/topup-requests": { key: ["topup-requests"], fn: () => fetch("/api/topup-requests").then((r) => r.json()) },
-  "/audit-log": { key: ["audit-logs"], fn: () => fetch("/api/audit-logs").then((r) => r.json()) },
 };
 
 export function AgencySidebar({ userName, userRole }: Props) {

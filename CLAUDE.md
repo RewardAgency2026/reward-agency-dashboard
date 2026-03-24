@@ -188,8 +188,8 @@ To be added in Sprint 4.
 | Sprint 4 | ✅ Done | Suppliers + Ad Accounts (parent/sub-supplier hierarchy, platform fees, KPIs, ad account status active/disabled/deleted, 21 tests) |
 | Sprint 5 | ✅ Done | Top Ups module (create, execute, reject, fee breakdown preview, platform icons, modal latency fixes, sidebar badge counter, 16 tests) |
 | Fee model | ✅ Done | top_up_fee_rate auto-derived from client_platform_fees; supplier_fee_rate from sub-supplier; both read-only on ad account |
-| Sprint 6 | 🔄 Next | Transactions page (full history, filters, export), Dashboard KPIs, P&L Report, Invoices |
-| Sprint 7 | ⏳ | Affiliates module (commissions, referrals) |
+| Sprint 6 | ✅ Done | Transactions page (filters+CSV), Dashboard (KPIs+charts+recharts), Settings (Agency Info/Team/Audit Log tabs), delete top-up enhanced UX, new audit actions |
+| Sprint 7 | 🔄 Next | Affiliates module (commissions, referrals) |
 | Sprint 8 | ⏳ | P&L + Invoices |
 | Sprint 9 | ⏳ | Client portal (balance, ad accounts, transactions, top-up requests) |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
