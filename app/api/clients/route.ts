@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
       affiliate_id: clients.affiliate_id,
       affiliate_name: affiliates.name,
       has_setup: clients.has_setup,
+      client_platform_fees: clients.client_platform_fees,
       created_at: clients.created_at,
     })
     .from(clients)

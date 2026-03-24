@@ -22,11 +22,33 @@ export async function GET(_req: NextRequest) {
     topupSums,
     adAccountCounts,
   ] = await Promise.all([
-    db.select().from(suppliers).orderBy(desc(suppliers.created_at)),
+    db
+      .select({
+        id: suppliers.id,
+        name: suppliers.name,
+        contact_email: suppliers.contact_email,
+        status: suppliers.status,
+        created_at: suppliers.created_at,
+      })
+      .from(suppliers)
+      .orderBy(desc(suppliers.created_at)),
 
-    db.select().from(supplier_sub_accounts),
+    db
+      .select({
+        id: supplier_sub_accounts.id,
+        supplier_id: supplier_sub_accounts.supplier_id,
+        name: supplier_sub_accounts.name,
+        status: supplier_sub_accounts.status,
+      })
+      .from(supplier_sub_accounts),
 
-    db.select().from(supplier_platform_fees),
+    db
+      .select({
+        supplier_sub_account_id: supplier_platform_fees.supplier_sub_account_id,
+        platform: supplier_platform_fees.platform,
+        fee_rate: supplier_platform_fees.fee_rate,
+      })
+      .from(supplier_platform_fees),
 
     // Total payments sent per supplier
     db

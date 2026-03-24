@@ -6,5 +6,6 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
 }
 
+// DATABASE_URL uses the Neon pooled endpoint (-pooler suffix) — connection pooling already active
 const sql = neon(process.env.DATABASE_URL);
 export const db = drizzle(sql, { schema });
