@@ -73,9 +73,10 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
   const grossMarginAmount = commissionAmount - providerAmount;
   const grossMarginRate = commissionRate - providerRate;
 
-  // Balance check: only the top-up amount affects wallet balance (not fees)
-  const newBalance = selectedClient ? selectedClient.wallet_balance - parsedAmount : 0;
-  const balanceSufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= parsedAmount;
+  // Balance check: wallet balance is reduced by top-up amount + client commission
+  const totalDeducted = parsedAmount + commissionAmount;
+  const newBalance = selectedClient ? selectedClient.wallet_balance - totalDeducted : 0;
+  const balanceSufficient = selectedClient && parsedAmount > 0 && selectedClient.wallet_balance >= totalDeducted;
   const balanceInsufficient = selectedClient && parsedAmount > 0 && !balanceSufficient;
 
   const isDisabledAccount = selectedAdAccount && selectedAdAccount.status !== "active";
@@ -235,6 +236,12 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                         <span>Top Up Amount</span>
                         <span className="font-mono">−{parsedAmount.toFixed(2)} {currency}</span>
                       </div>
+                      {commissionRate > 0 && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Client Commission ({commissionRate}%)</span>
+                          <span className="font-mono text-red-600">−{commissionAmount.toFixed(2)} {currency}</span>
+                        </div>
+                      )}
                       <div className={cn(
                         "flex justify-between border-t pt-1.5 font-semibold",
                         balanceSufficient ? "border-emerald-200" : "border-red-200"
@@ -246,18 +253,20 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                       </div>
                     </div>
 
-                    {/* Fee breakdown */}
-                    {selectedAdAccount && (commissionRate > 0 || providerRate > 0) && (
+                    {/* Internal fee breakdown */}
+                    {selectedAdAccount && (
                       <div className={cn(
                         "space-y-1 border-t pt-2 mt-1",
                         balanceSufficient ? "border-emerald-200" : "border-red-200"
                       )}>
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Internal Fee Breakdown</p>
-                        {commissionRate > 0 && (
+                        {commissionRate > 0 ? (
                           <div className="flex justify-between text-xs">
                             <span className="text-gray-500">Client Commission ({commissionRate}%)</span>
                             <span className="font-mono text-emerald-700">+{commissionAmount.toFixed(2)} {currency}</span>
                           </div>
+                        ) : (
+                          <p className="text-xs text-amber-600">⚠ No commission rate set for this platform</p>
                         )}
                         {providerRate > 0 && (
                           <div className="flex justify-between text-xs">
