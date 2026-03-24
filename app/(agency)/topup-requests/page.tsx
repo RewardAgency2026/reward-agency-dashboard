@@ -71,6 +71,7 @@ export default async function TopupRequestsPage() {
         client_code: clients.client_code,
         balance_model: clients.balance_model,
         billing_currency: clients.billing_currency,
+        client_platform_fees: clients.client_platform_fees,
       })
       .from(clients)
       .where(eq(clients.status, "active"))
@@ -104,6 +105,7 @@ export default async function TopupRequestsPage() {
   const clientOptions = clientRows.map((c) => ({
     ...c,
     wallet_balance: balanceFromData(clientBalanceMap.get(c.id), c.balance_model),
+    client_platform_fees: c.client_platform_fees as Record<string, number> | null,
   }));
 
   const adAccountOptions = adAccountRows.map((a) => ({

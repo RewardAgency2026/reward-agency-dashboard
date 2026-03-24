@@ -40,9 +40,9 @@ export async function POST(
   if (request.status === "executed") return NextResponse.json({ error: "Already executed" }, { status: 409 });
   if (request.status === "rejected") return NextResponse.json({ error: "Request is rejected" }, { status: 409 });
 
-  // Fetch client for balance model
+  // Fetch client for balance model + platform fees (source of truth for commission rate)
   const [client] = await db
-    .select({ id: clients.id, balance_model: clients.balance_model })
+    .select({ id: clients.id, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees })
     .from(clients)
     .where(eq(clients.id, request.client_id))
     .limit(1);
@@ -93,9 +93,10 @@ export async function POST(
     return NextResponse.json({ error: "Insufficient funds", wallet_balance }, { status: 402 });
   }
 
-  // Calculate fee snapshots
+  // Calculate fee snapshots — commission rate always from client_platform_fees (source of truth)
   const supplier_fee_amount = amount * (supplierFeeRate / 100);
-  const top_up_fee_rate = parseFloat(adAccount.top_up_fee_rate);
+  const platformFees = client.client_platform_fees as Record<string, number> | null;
+  const top_up_fee_rate = platformFees?.[adAccount.platform] ?? parseFloat(adAccount.top_up_fee_rate);
   const top_up_fee_amount = amount * (top_up_fee_rate / 100);
 
   // Insert topup transaction

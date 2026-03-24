@@ -9,8 +9,7 @@ import { EditClientModal } from "./edit-client-modal";
 import { CreditModal } from "./credit-modal";
 import { WithdrawModal } from "./withdraw-modal";
 import { AddAdAccountModal } from "@/components/ad-accounts/add-ad-account-modal";
-import { TopupRequestsTable, type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
-import { NewRequestModal } from "@/components/topup-requests/new-request-modal";
+import { type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
 
 interface Affiliate {
   id: string;
@@ -216,7 +215,50 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
       {/* Overview */}
       {tab === "Overview" && (
         <div className="space-y-6">
-          {/* Core info */}
+          {/* Commission Rates — top priority */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+            <h3 className="text-sm font-semibold text-blue-900 mb-1">Commission Rates</h3>
+            <p className="text-xs text-blue-600 mb-4">What this client pays per platform top up</p>
+            <div className="grid grid-cols-5 gap-4">
+              {(Object.keys(PLATFORM_LABELS) as (keyof PlatformFees)[]).map((p) => {
+                const rate = client.client_platform_fees?.[p] ?? 0;
+                return (
+                  <div key={p} className="text-center">
+                    <div className="flex justify-center mb-1">
+                      <PlatformIcon platform={p} size={20} />
+                    </div>
+                    <p className="text-xs font-medium text-blue-700 mb-0.5">{PLATFORM_LABELS[p]}</p>
+                    <p className={cn("text-sm font-semibold font-mono", rate > 0 ? "text-blue-900" : "text-blue-300")}>
+                      {rate > 0 ? `${rate}%` : "—"}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Setup Configuration */}
+          {client.has_setup && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+              <h3 className="text-sm font-semibold text-purple-800 mb-4">Setup Configuration</h3>
+              <dl className="grid grid-cols-2 gap-4">
+                <div>
+                  <dt className="text-xs font-medium text-purple-600">Monthly Fee (client)</dt>
+                  <dd className="mt-1 text-sm font-semibold text-purple-900 font-mono">
+                    {client.setup_monthly_fee ? `$${parseFloat(client.setup_monthly_fee).toFixed(2)}` : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-purple-600">Monthly Cost (internal)</dt>
+                  <dd className="mt-1 text-sm font-semibold text-purple-900 font-mono">
+                    {client.setup_monthly_cost ? `$${parseFloat(client.setup_monthly_cost).toFixed(2)}` : "—"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          {/* Client Details */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Client Details</h3>
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -246,46 +288,6 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notes}</p>
             </div>
           )}
-
-          {/* Setup fees */}
-          {client.has_setup && (
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
-              <h3 className="text-sm font-semibold text-purple-800 mb-4">Setup Configuration</h3>
-              <dl className="grid grid-cols-2 gap-4">
-                <div>
-                  <dt className="text-xs font-medium text-purple-600">Monthly Fee (client)</dt>
-                  <dd className="mt-1 text-sm font-semibold text-purple-900 font-mono">
-                    {client.setup_monthly_fee ? `$${parseFloat(client.setup_monthly_fee).toFixed(2)}` : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-purple-600">Monthly Cost (internal)</dt>
-                  <dd className="mt-1 text-sm font-semibold text-purple-900 font-mono">
-                    {client.setup_monthly_cost ? `$${parseFloat(client.setup_monthly_cost).toFixed(2)}` : "—"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          )}
-
-          {/* Commission Rates */}
-          <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
-            <h3 className="text-sm font-semibold text-blue-900 mb-1">Commission Rates</h3>
-            <p className="text-xs text-blue-600 mb-4">What this client pays per platform top up</p>
-            <div className="grid grid-cols-5 gap-4">
-              {(Object.keys(PLATFORM_LABELS) as (keyof PlatformFees)[]).map((p) => {
-                const rate = client.client_platform_fees?.[p] ?? 0;
-                return (
-                  <div key={p} className="text-center">
-                    <p className="text-xs font-medium text-blue-700 mb-1">{PLATFORM_LABELS[p]}</p>
-                    <p className={cn("text-sm font-semibold font-mono", rate > 0 ? "text-blue-900" : "text-blue-300")}>
-                      {rate > 0 ? `${rate}%` : "—"}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
       )}
 
@@ -382,28 +384,83 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
 
       {tab === "Top Ups" && (
         <div>
-          {canCredit && (
-            <div className="mb-4 flex justify-end">
-              <NewRequestModal
-                clients={[{
-                  id: client.id,
-                  name: client.name,
-                  client_code: client.client_code,
-                  balance_model: client.balance_model,
-                  billing_currency: client.billing_currency,
-                  wallet_balance: client.wallet_balance,
-                }]}
-                adAccounts={adAccountOptions}
-                prefillClientId={client.id}
-                label="New Top-Up"
-              />
-            </div>
-          )}
-          <TopupRequestsTable
-            requests={topupRequests}
-            isAdmin={canCredit}
-            hideClientColumn
-          />
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            {topupRequests.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No top-up requests yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {["Date", "Ad Account", "Provider", "Amount", "Status", "Commission", "Provider Fee", "Gross Margin"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {topupRequests.map((r) => {
+                    const amount = parseFloat(r.amount);
+                    const commissionRate = r.ad_account_platform
+                      ? (client.client_platform_fees?.[r.ad_account_platform as keyof PlatformFees] ?? 0)
+                      : 0;
+                    const providerRate = r.supplier_fee_rate ? parseFloat(r.supplier_fee_rate) : 0;
+                    const commissionAmt = amount * (commissionRate / 100);
+                    const providerAmt = amount * (providerRate / 100);
+                    const margin = commissionAmt - providerAmt;
+
+                    const STATUS_BADGE_MAP: Record<string, string> = {
+                      pending: "bg-amber-50 text-amber-700 border border-amber-200",
+                      approved: "bg-blue-50 text-blue-700 border border-blue-200",
+                      insufficient_funds: "bg-red-50 text-red-600 border border-red-200",
+                      executed: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                      rejected: "bg-gray-100 text-gray-500",
+                    };
+                    const STATUS_LABEL: Record<string, string> = {
+                      pending: "Pending", approved: "Approved",
+                      insufficient_funds: "Insuf. Funds", executed: "Executed", rejected: "Rejected",
+                    };
+
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50/50">
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(r.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={16} />}
+                            <span className="font-medium text-gray-900">{r.ad_account_name ?? "—"}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          <p className="text-sm">{r.supplier_name ?? "—"}</p>
+                          {r.sub_account_name && <p className="text-xs text-gray-400">{r.sub_account_name}</p>}
+                        </td>
+                        <td className="px-4 py-3 font-mono">
+                          <p className="font-semibold text-gray-900">{amount.toFixed(2)}</p>
+                          <p className="text-xs text-gray-400">{r.currency}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE_MAP[r.status] ?? "bg-gray-100 text-gray-500")}>
+                            {STATUS_LABEL[r.status] ?? r.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          <p className="text-emerald-700 font-semibold">{commissionRate > 0 ? `${commissionRate}%` : "—"}</p>
+                          {commissionRate > 0 && <p className="text-gray-500">+{commissionAmt.toFixed(2)}</p>}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          <p className="text-red-600 font-semibold">{providerRate > 0 ? `${providerRate}%` : "—"}</p>
+                          {providerRate > 0 && <p className="text-gray-500">−{providerAmt.toFixed(2)}</p>}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs font-semibold">
+                          <span className={margin >= 0 ? "text-emerald-700" : "text-red-600"}>
+                            {margin >= 0 ? "+" : "−"}{Math.abs(margin).toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
     </div>

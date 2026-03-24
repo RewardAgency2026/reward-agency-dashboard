@@ -12,6 +12,7 @@ interface ClientOption {
   balance_model: string;
   wallet_balance: number;
   billing_currency: string;
+  client_platform_fees: Record<string, number> | null;
 }
 
 interface AdAccountOption {
@@ -62,8 +63,10 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
 
   const parsedAmount = parseFloat(amount) || 0;
 
-  // Fee calculations
-  const commissionRate = selectedAdAccount ? parseFloat(selectedAdAccount.top_up_fee_rate) : 0;
+  // Fee calculations — commission rate from client_platform_fees (source of truth), not ad account field
+  const commissionRate = selectedAdAccount && selectedClient
+    ? (selectedClient.client_platform_fees?.[selectedAdAccount.platform] ?? 0)
+    : 0;
   const commissionAmount = parsedAmount > 0 ? parsedAmount * (commissionRate / 100) : 0;
   const providerRate = selectedAdAccount?.supplier_fee_rate ? parseFloat(selectedAdAccount.supplier_fee_rate) : 0;
   const providerAmount = parsedAmount > 0 ? parsedAmount * (providerRate / 100) : 0;
