@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 import { cn } from "@/lib/utils";
 import { EditClientModal } from "./edit-client-modal";
 import { CreditModal } from "./credit-modal";
@@ -316,7 +317,12 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
                 <tbody className="divide-y divide-gray-100">
                   {client.ad_accounts.map((a) => (
                     <tr key={a.id} className="hover:bg-gray-50/50">
-                      <td className="px-4 py-3 capitalize">{a.platform}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <PlatformIcon platform={a.platform} size={18} />
+                          <span className="text-sm text-gray-700 capitalize">{a.platform}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{a.account_name}</p>
                         <p className="text-xs font-mono text-gray-400">{a.account_id}</p>

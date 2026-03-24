@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { EditAdAccountModal } from "./edit-ad-account-modal";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 
 interface SupplierOption {
   id: string;
@@ -105,9 +106,10 @@ export function AdAccountsTable({ adAccounts, suppliers, isAdmin }: Props) {
               {filtered.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50/50">
                   <td className="px-4 py-3">
-                    <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", PLATFORM_BADGE[a.platform] ?? "bg-gray-100 text-gray-600")}>
-                      {PLATFORM_LABELS[a.platform] ?? a.platform}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <PlatformIcon platform={a.platform} size={18} />
+                      <span className="text-sm text-gray-700">{PLATFORM_LABELS[a.platform] ?? a.platform}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{a.account_name}</p>

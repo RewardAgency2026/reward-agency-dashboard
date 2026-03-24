@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ExecuteModal } from "./execute-modal";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 
 export interface TopupRequestRow {
   id: string;
@@ -60,13 +61,6 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
-const PLATFORM_ICONS: Record<string, string> = {
-  meta: "🟦",
-  google: "🔴",
-  tiktok: "⬛",
-  snapchat: "🟡",
-  pinterest: "🔴",
-};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -177,13 +171,13 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                       </td>
                     )}
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">
-                        {r.ad_account_platform && (
-                          <span className="mr-1">{PLATFORM_ICONS[r.ad_account_platform] ?? ""}</span>
-                        )}
-                        {r.ad_account_name}
-                      </p>
-                      <p className="text-xs text-gray-400 capitalize">{r.ad_account_platform}</p>
+                      <div className="flex items-center gap-2">
+                        {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={18} />}
+                        <div>
+                          <p className="font-medium text-gray-900">{r.ad_account_name}</p>
+                          <p className="text-xs text-gray-400 capitalize">{r.ad_account_platform}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-gray-700">{r.supplier_name ?? "—"}</p>

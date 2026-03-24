@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AddSubAccountModal } from "./add-sub-account-modal";
@@ -200,7 +201,8 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {sa.platform_fees.filter((f) => parseFloat(f.fee_rate) > 0).map((f) => (
-                            <span key={f.platform} className={cn("rounded-full px-2 py-0.5 text-xs font-medium", PLATFORM_BADGE[f.platform] ?? "bg-gray-100 text-gray-600")}>
+                            <span key={f.platform} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700">
+                              <PlatformIcon platform={f.platform} size={13} />
                               {PLATFORM_LABELS[f.platform] ?? f.platform} {parseFloat(f.fee_rate)}%
                             </span>
                           ))}
@@ -252,9 +254,10 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
                 {supplier.ad_accounts.map((a) => (
                   <tr key={a.id} className="hover:bg-gray-50/50">
                     <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", PLATFORM_BADGE[a.platform] ?? "bg-gray-100 text-gray-600")}>
-                        {PLATFORM_LABELS[a.platform] ?? a.platform}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <PlatformIcon platform={a.platform} size={18} />
+                        <span className="text-sm text-gray-700">{PLATFORM_LABELS[a.platform] ?? a.platform}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{a.account_name}</p>

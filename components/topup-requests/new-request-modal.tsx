@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 
 interface ClientOption {
   id: string;
@@ -162,6 +163,8 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                 {/* Ad Account */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ad Account <span className="text-red-500">*</span></label>
+                  <div className="flex items-center gap-2">
+                    {selectedAdAccount && <PlatformIcon platform={selectedAdAccount.platform} size={22} />}
                   <select
                     value={adAccountId}
                     onChange={(e) => setAdAccountId(e.target.value)}
@@ -176,6 +179,7 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                       </option>
                     ))}
                   </select>
+                  </div>
                   {clientId && filteredAdAccounts.length === 0 && (
                     <p className="mt-1 text-xs text-gray-400">No ad accounts for this client.</p>
                   )}
