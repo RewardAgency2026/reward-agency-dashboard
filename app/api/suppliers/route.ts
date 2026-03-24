@@ -96,7 +96,8 @@ export async function GET(_req: NextRequest) {
           total_sub_accounts: subAccounts.length,
         },
       };
-    })
+    }),
+    { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } }
   );
 }
 

@@ -101,6 +101,8 @@ export async function GET(
     wallet_balance,
     transactions: recentTxns,
     ad_accounts: adAccountsList,
+  }, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
   });
 }
 

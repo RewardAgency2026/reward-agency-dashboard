@@ -1,114 +1,89 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
-import { and, desc, eq, inArray } from "drizzle-orm";
-import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
-import { TopupRequestsTable, type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { TopupRequestsTable } from "@/components/topup-requests/topup-requests-table";
 import { NewRequestModal } from "@/components/topup-requests/new-request-modal";
 
-export default async function TopupRequestsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
+function TableSkeleton() {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <table className="w-full text-sm">
+        <tbody className="divide-y divide-gray-100">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <tr key={i} className="animate-pulse">
+              {Array.from({ length: 7 }).map((_, j) => (
+                <td key={j} className="px-4 py-3">
+                  <div className="h-4 bg-gray-100 rounded w-3/4" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-  const isAdmin = ["admin", "team"].includes(session.user.role);
+export default function TopupRequestsPage() {
+  const { data: session } = useSession();
+  const isAdmin = ["admin", "team"].includes(session?.user.role ?? "");
 
-  // Fetch all topup requests with joins
-  const rows = await db
-    .select({
-      id: topup_requests.id,
-      client_id: topup_requests.client_id,
-      ad_account_id: topup_requests.ad_account_id,
-      supplier_id: topup_requests.supplier_id,
-      amount: topup_requests.amount,
-      currency: topup_requests.currency,
-      status: topup_requests.status,
-      notes: topup_requests.notes,
-      executed_by: topup_requests.executed_by,
-      executed_at: topup_requests.executed_at,
-      created_at: topup_requests.created_at,
-      client_name: clients.name,
-      client_code: clients.client_code,
-      client_balance_model: clients.balance_model,
-      ad_account_platform: ad_accounts.platform,
-      ad_account_name: ad_accounts.account_name,
-      top_up_fee_rate: ad_accounts.top_up_fee_rate,
-      supplier_name: suppliers.name,
-      sub_account_name: supplier_sub_accounts.name,
-      supplier_fee_rate: supplier_platform_fees.fee_rate,
-    })
-    .from(topup_requests)
-    .leftJoin(clients, eq(topup_requests.client_id, clients.id))
-    .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
-    .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
-    .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))
-    .leftJoin(
-      supplier_platform_fees,
-      and(
-        eq(supplier_platform_fees.supplier_sub_account_id, supplier_sub_accounts.id),
-        eq(supplier_platform_fees.platform, ad_accounts.platform)
-      )
-    )
-    .orderBy(desc(topup_requests.created_at));
+  const { data: requests, isLoading } = useQuery({
+    queryKey: ["topup-requests"],
+    queryFn: () => fetch("/api/topup-requests").then((r) => r.json()),
+  });
 
-  // Batch compute wallet balances
-  const uniqueClientIds = [...new Set(rows.map((r) => r.client_id))];
-  const balanceMap = await calculateWalletBalances(uniqueClientIds);
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => fetch("/api/clients").then((r) => r.json()),
+    enabled: isAdmin,
+  });
 
-  const requestRows: TopupRequestRow[] = rows.map((r) => ({
-    ...r,
-    executed_at: r.executed_at?.toISOString() ?? null,
-    created_at: r.created_at.toISOString(),
-    wallet_balance: balanceFromData(balanceMap.get(r.client_id), r.client_balance_model ?? "classic"),
-  }));
+  const { data: adAccountsRaw = [] } = useQuery({
+    queryKey: ["ad-accounts"],
+    queryFn: () => fetch("/api/ad-accounts").then((r) => r.json()),
+    enabled: isAdmin,
+  });
 
-  // Fetch data for NewRequestModal
-  const [clientRows, adAccountRows] = await Promise.all([
-    db
-      .select({
-        id: clients.id,
-        name: clients.name,
-        client_code: clients.client_code,
-        balance_model: clients.balance_model,
-        billing_currency: clients.billing_currency,
-        client_platform_fees: clients.client_platform_fees,
-      })
-      .from(clients)
-      .where(eq(clients.status, "active"))
-      .orderBy(clients.name),
+  const { data: suppliersRaw = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => fetch("/api/suppliers").then((r) => r.json()),
+    enabled: isAdmin,
+  });
 
-    db
-      .select({
-        id: ad_accounts.id,
-        client_id: ad_accounts.client_id,
-        platform: ad_accounts.platform,
-        account_name: ad_accounts.account_name,
-        top_up_fee_rate: ad_accounts.top_up_fee_rate,
-        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
-        status: ad_accounts.status,
-      })
-      .from(ad_accounts),
-  ]);
-
-  // Fetch supplier fees for ad account options
-  const subIds = [...new Set(adAccountRows.map((a) => a.supplier_sub_account_id).filter(Boolean))] as string[];
-  const supplierFeeRows = subIds.length > 0
-    ? await db.select().from(supplier_platform_fees).where(inArray(supplier_platform_fees.supplier_sub_account_id, subIds))
-    : [];
+  // Build supplier fee map: "subAccountId:platform" -> fee_rate string
   const supplierFeeMap = new Map<string, string>();
-  for (const f of supplierFeeRows) {
-    supplierFeeMap.set(`${f.supplier_sub_account_id}:${f.platform}`, f.fee_rate);
+  for (const s of suppliersRaw as Array<{
+    sub_accounts?: Array<{ id: string; platform_fees?: Array<{ platform: string; fee_rate: string }> }>;
+  }>) {
+    for (const sa of (s.sub_accounts ?? [])) {
+      for (const fee of (sa.platform_fees ?? [])) {
+        supplierFeeMap.set(`${sa.id}:${fee.platform}`, fee.fee_rate);
+      }
+    }
   }
 
-  // Attach wallet balances to clients for NewRequestModal
-  const clientBalanceMap = await calculateWalletBalances(clientRows.map((c) => c.id));
-  const clientOptions = clientRows.map((c) => ({
-    ...c,
-    wallet_balance: balanceFromData(clientBalanceMap.get(c.id), c.balance_model),
-    client_platform_fees: c.client_platform_fees as Record<string, number> | null,
-  }));
+  const clientOptions = (clients as Array<{
+    id: string; name: string; client_code: string; balance_model: string;
+    wallet_balance: number; billing_currency: string; status: string;
+    client_platform_fees: Record<string, number> | null;
+  }>)
+    .filter((c) => c.status === "active")
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      client_code: c.client_code,
+      balance_model: c.balance_model,
+      wallet_balance: c.wallet_balance,
+      billing_currency: c.billing_currency,
+      client_platform_fees: c.client_platform_fees,
+    }));
 
-  const adAccountOptions = adAccountRows.map((a) => ({
+  const adAccountOptions = (adAccountsRaw as Array<{
+    id: string; client_id: string; platform: string; account_name: string;
+    top_up_fee_rate: string; supplier_sub_account_id: string | null; status: string;
+  }>).map((a) => ({
     id: a.id,
     client_id: a.client_id,
     platform: a.platform,
@@ -128,7 +103,11 @@ export default async function TopupRequestsPage() {
           <NewRequestModal clients={clientOptions} adAccounts={adAccountOptions} label="New Top-Up" />
         )}
       </div>
-      <TopupRequestsTable requests={requestRows} isAdmin={isAdmin} />
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <TopupRequestsTable requests={requests ?? []} isAdmin={isAdmin} />
+      )}
     </div>
   );
 }

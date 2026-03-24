@@ -14,5 +14,7 @@ export async function GET(_req: NextRequest) {
     .orderBy(desc(audit_logs.created_at))
     .limit(500);
 
-  return NextResponse.json(logs);
+  return NextResponse.json(logs, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
+  });
 }

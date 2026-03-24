@@ -111,6 +111,8 @@ export async function GET(
       total_ad_accounts: adAccountRows.length,
       total_sub_accounts: subAccountRows.length,
     },
+  }, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
   });
 }
 

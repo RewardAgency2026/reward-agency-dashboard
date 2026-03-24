@@ -80,7 +80,9 @@ export async function GET(req: NextRequest) {
     wallet_balance: balanceFromData(balanceMap.get(c.id), c.balance_model),
   }));
 
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
+  });
 }
 
 export async function POST(req: NextRequest) {

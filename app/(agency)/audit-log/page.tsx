@@ -1,27 +1,33 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { audit_logs } from "@/db/schema";
-import { desc } from "drizzle-orm";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { AuditLogTable } from "@/components/audit-log/audit-log-table";
 
-export default async function AuditLogPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
+function TableSkeleton() {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <table className="w-full text-sm">
+        <tbody className="divide-y divide-gray-100">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="animate-pulse">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <td key={j} className="px-4 py-3">
+                  <div className="h-4 bg-gray-100 rounded w-3/4" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-  const logs = await db
-    .select()
-    .from(audit_logs)
-    .orderBy(desc(audit_logs.created_at))
-    .limit(500);
-
-  const rows = logs.map((l) => ({
-    id: l.id,
-    user_name: l.user_name,
-    action: l.action,
-    details: l.details as Record<string, unknown>,
-    created_at: l.created_at.toISOString(),
-  }));
+export default function AuditLogPage() {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["audit-logs"],
+    queryFn: () => fetch("/api/audit-logs").then((r) => r.json()),
+  });
 
   return (
     <div>
@@ -29,7 +35,11 @@ export default async function AuditLogPage() {
         <h1 className="text-2xl font-bold text-gray-900">Audit Log</h1>
         <p className="text-sm text-gray-500 mt-1">All sensitive actions tracked in real-time</p>
       </div>
-      <AuditLogTable logs={rows} />
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <AuditLogTable logs={logs ?? []} />
+      )}
     </div>
   );
 }

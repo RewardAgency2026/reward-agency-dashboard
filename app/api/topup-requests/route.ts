@@ -67,7 +67,9 @@ export async function GET(req: NextRequest) {
     wallet_balance: balanceFromData(balanceMap.get(r.client_id), r.client_balance_model ?? "classic"),
   }));
 
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
+  });
 }
 
 const createSchema = z.object({

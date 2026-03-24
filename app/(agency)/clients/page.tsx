@@ -1,51 +1,50 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { clients, affiliates } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { ClientsTable } from "@/components/clients/clients-table";
-import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
 
-export default async function ClientsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
+function TableSkeleton() {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <table className="w-full text-sm">
+        <tbody className="divide-y divide-gray-100">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <tr key={i} className="animate-pulse">
+              {Array.from({ length: 5 }).map((_, j) => (
+                <td key={j} className="px-4 py-3">
+                  <div className="h-4 bg-gray-100 rounded w-3/4" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-  const [rows, affiliateList] = await Promise.all([
-    db
-      .select({
-        id: clients.id,
-        client_code: clients.client_code,
-        name: clients.name,
-        email: clients.email,
-        company: clients.company,
-        status: clients.status,
-        balance_model: clients.balance_model,
-        billing_currency: clients.billing_currency,
-        crypto_fee_rate: clients.crypto_fee_rate,
-        affiliate_id: clients.affiliate_id,
-        affiliate_name: affiliates.name,
-        has_setup: clients.has_setup,
-        created_at: clients.created_at,
-      })
-      .from(clients)
-      .leftJoin(affiliates, eq(clients.affiliate_id, affiliates.id))
-      .orderBy(desc(clients.created_at)),
+export default function ClientsPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "admin";
 
-    db
-      .select({ id: affiliates.id, name: affiliates.name, affiliate_code: affiliates.affiliate_code })
-      .from(affiliates)
-      .where(eq(affiliates.status, "active")),
-  ]);
+  const { data: clients, isLoading: clientsLoading } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => fetch("/api/clients").then((r) => r.json()),
+  });
 
-  const balanceMap = await calculateWalletBalances(rows.map((r) => r.id));
+  const { data: affiliates = [] } = useQuery({
+    queryKey: ["affiliates"],
+    queryFn: () => fetch("/api/affiliates").then((r) => r.json()),
+  });
 
-  const data = rows.map((c) => ({
-    ...c,
-    created_at: c.created_at.toISOString(),
-    wallet_balance: balanceFromData(balanceMap.get(c.id), c.balance_model),
-  }));
-
-  const isAdmin = session.user.role === "admin";
-
-  return <ClientsTable clients={data} affiliates={affiliateList} isAdmin={isAdmin} />;
+  return (
+    <div>
+      {clientsLoading ? (
+        <TableSkeleton />
+      ) : (
+        <ClientsTable clients={clients ?? []} affiliates={affiliates} isAdmin={isAdmin} />
+      )}
+    </div>
+  );
 }

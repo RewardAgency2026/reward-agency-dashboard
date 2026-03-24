@@ -18,6 +18,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -39,8 +40,17 @@ interface Props {
   userRole: string;
 }
 
+const PREFETCH_MAP: Record<string, { key: unknown[]; fn: () => Promise<unknown> }> = {
+  "/clients": { key: ["clients"], fn: () => fetch("/api/clients").then((r) => r.json()) },
+  "/suppliers": { key: ["suppliers"], fn: () => fetch("/api/suppliers").then((r) => r.json()) },
+  "/ad-accounts": { key: ["ad-accounts"], fn: () => fetch("/api/ad-accounts").then((r) => r.json()) },
+  "/topup-requests": { key: ["topup-requests"], fn: () => fetch("/api/topup-requests").then((r) => r.json()) },
+  "/audit-log": { key: ["audit-logs"], fn: () => fetch("/api/audit-logs").then((r) => r.json()) },
+};
+
 export function AgencySidebar({ userName, userRole }: Props) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [topupCount, setTopupCount] = useState(0);
 
   useEffect(() => {
@@ -84,6 +94,10 @@ export function AgencySidebar({ userName, userRole }: Props) {
               <li key={href}>
                 <Link
                   href={href}
+                  onMouseEnter={() => {
+                    const p = PREFETCH_MAP[href as string];
+                    if (p) queryClient.prefetchQuery({ queryKey: p.key, queryFn: p.fn });
+                  }}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
                     isActive
