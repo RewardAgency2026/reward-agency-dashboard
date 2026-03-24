@@ -54,6 +54,7 @@ export async function POST(
     .select({
       id: ad_accounts.id,
       platform: ad_accounts.platform,
+      account_name: ad_accounts.account_name,
       top_up_fee_rate: ad_accounts.top_up_fee_rate,
       status: ad_accounts.status,
       supplier_id: ad_accounts.supplier_id,
@@ -88,20 +89,20 @@ export async function POST(
 
   const amount = parseFloat(request.amount);
 
-  // Re-check wallet balance at execution time
-  const wallet_balance = await calculateWalletBalance(request.client_id, client.balance_model);
-  if (!force && wallet_balance < amount) {
-    return NextResponse.json({ error: "Insufficient funds", wallet_balance }, { status: 402 });
-  }
-
-  // Calculate fee snapshots — commission rate always from client_platform_fees (source of truth)
+  // Calculate fee amounts — commission rate always from client_platform_fees (source of truth)
   const supplier_fee_amount = amount * (supplierFeeRate / 100);
   const platformFees = client.client_platform_fees as Record<string, number> | null;
   const top_up_fee_rate = platformFees?.[adAccount.platform] ?? parseFloat(adAccount.top_up_fee_rate);
   const top_up_fee_amount = amount * (top_up_fee_rate / 100);
 
-  // Insert topup transaction
-  const [txn] = await db
+  // Re-check wallet balance at execution time (must cover top-up + commission)
+  const wallet_balance = await calculateWalletBalance(request.client_id, client.balance_model);
+  if (!force && wallet_balance < amount + top_up_fee_amount) {
+    return NextResponse.json({ error: "Insufficient funds", wallet_balance }, { status: 402 });
+  }
+
+  // Transaction 1 — Top-up debit
+  const [topupTxn] = await db
     .insert(transactions)
     .values({
       client_id: request.client_id,
@@ -114,10 +115,31 @@ export async function POST(
       supplier_fee_amount: String(supplier_fee_amount),
       supplier_fee_rate_snapshot: String(supplierFeeRate),
       top_up_fee_amount: String(top_up_fee_amount),
-      description: `Top-up for ${adAccount.platform} ad account`,
+      description: `Top-up — ${adAccount.account_name}`,
       created_by: session.user.id,
     })
     .returning();
+
+  // Transaction 2 — Client commission fee debit (only when rate > 0)
+  let commissionTxn = null;
+  if (top_up_fee_amount > 0) {
+    const [row] = await db
+      .insert(transactions)
+      .values({
+        client_id: request.client_id,
+        ad_account_id: request.ad_account_id,
+        supplier_id: adAccount.supplier_id,
+        type: "commission_fee",
+        amount: String(top_up_fee_amount),
+        currency: request.currency,
+        is_crypto: false,
+        top_up_fee_amount: String(top_up_fee_amount),
+        description: `Commission fee ${top_up_fee_rate}% — ${adAccount.platform} — ${adAccount.account_name}`,
+        created_by: session.user.id,
+      })
+      .returning();
+    commissionTxn = row;
+  }
 
   // Update topup request status
   const [updatedRequest] = await db
@@ -141,6 +163,7 @@ export async function POST(
       client_id: request.client_id,
       client_name: client.name,
       amount: amount,
+      commission_fee: top_up_fee_amount,
       currency: request.currency,
       ad_account_platform: adAccount.platform,
       supplier_id: adAccount.supplier_id,
@@ -149,7 +172,8 @@ export async function POST(
 
   return NextResponse.json({
     request: updatedRequest,
-    transaction: txn,
+    transaction: topupTxn,
+    commission_transaction: commissionTxn,
     wallet_balance: new_wallet_balance,
   });
 }

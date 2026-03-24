@@ -34,9 +34,9 @@ export function ExecuteModal({ request, onSuccess }: Props) {
   const topUpFeeRate = parseFloat(request.top_up_fee_rate ?? "0");
   const supplierFeeAmount = amount * (supplierFeeRate / 100);
   const topUpFeeAmount = amount * (topUpFeeRate / 100);
-  const balanceAfter = request.wallet_balance - amount;
+  const balanceAfter = request.wallet_balance - amount - topUpFeeAmount;
   const isForce = request.status === "insufficient_funds";
-  const insufficient = request.wallet_balance < amount;
+  const insufficient = request.wallet_balance < amount + topUpFeeAmount;
 
   function handleClose() {
     setOpen(false);
@@ -127,7 +127,17 @@ export function ExecuteModal({ request, onSuccess }: Props) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Balance after</span>
+                <span className="text-gray-500">Top-up amount</span>
+                <span className="font-mono text-gray-700">−{amount.toFixed(2)} {request.currency}</span>
+              </div>
+              {topUpFeeAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Commission ({topUpFeeRate}%)</span>
+                  <span className="font-mono text-red-600">−{topUpFeeAmount.toFixed(2)} {request.currency}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-gray-200 pt-2">
+                <span className="text-gray-600 font-medium">Balance after</span>
                 <span className={cn("font-mono font-semibold", balanceAfter >= 0 ? "text-emerald-600" : "text-red-500")}>
                   {balanceAfter.toFixed(2)} {request.currency}
                 </span>

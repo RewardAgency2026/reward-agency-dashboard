@@ -274,7 +274,7 @@ describe("GET /api/topup-requests/[id]", () => {
 
 // ── Execute ────────────────────────────────────────────────────────────────────
 describe("POST /api/topup-requests/[id]/execute", () => {
-  it("executes request: creates transaction with correct fee snapshots", async () => {
+  it("executes request: creates topup + commission_fee transactions with correct amounts", async () => {
     const { status, data } = await api("POST", `/api/topup-requests/${requestApprovedId}/execute`, {});
     assert.equal(status, 200, JSON.stringify(data));
 
@@ -282,9 +282,9 @@ describe("POST /api/topup-requests/[id]/execute", () => {
     assert.equal(data.request.status, "executed");
     assert.ok(data.request.executed_at, "executed_at should be set");
 
-    // Transaction created
+    // Topup transaction
     const txn = data.transaction;
-    assert.ok(txn, "transaction should be returned");
+    assert.ok(txn, "topup transaction should be returned");
     assert.equal(txn.type, "topup");
     assert.equal(parseFloat(txn.amount), 100);
 
@@ -292,16 +292,22 @@ describe("POST /api/topup-requests/[id]/execute", () => {
     assert.equal(parseFloat(txn.supplier_fee_amount), 3.0, "supplier_fee_amount should be 3.00");
     assert.equal(parseFloat(txn.supplier_fee_rate_snapshot), 3.0, "supplier_fee_rate_snapshot should be 3.0");
 
-    // Agency commission: 5% of 100 = 5.00
+    // Agency commission snapshot: 5% of 100 = 5.00
     assert.equal(parseFloat(txn.top_up_fee_amount), 5.0, "top_up_fee_amount should be 5.00");
 
-    // Wallet balance returned and updated
+    // Commission fee transaction: 5% of 100 = 5.00
+    const commTxn = data.commission_transaction;
+    assert.ok(commTxn, "commission_transaction should be returned");
+    assert.equal(commTxn.type, "commission_fee");
+    assert.equal(parseFloat(commTxn.amount), 5.0, "commission amount should be 5% of 100 = 5.00");
+
+    // Wallet balance: 1000 - 100 (topup) - 5 (commission_fee) = 895
     assert.ok(typeof data.wallet_balance === "number", "wallet_balance should be a number");
-    assert.ok(data.wallet_balance < 1000, "wallet_balance should have decreased");
+    assert.equal(data.wallet_balance, 895, "wallet_balance should be 895 after $100 topup + 5% commission");
   });
 
   it("fails if wallet is insufficient (without force)", async () => {
-    // requestInsufficientId has $10 balance, amount is $500
+    // requestInsufficientId has $10 balance, amount is $500, commission 5% = $25 → total $525 > $10
     const { status, data } = await api("POST", `/api/topup-requests/${requestInsufficientId}/execute`, {});
     assert.equal(status, 402, JSON.stringify(data));
     assert.ok("wallet_balance" in data);
