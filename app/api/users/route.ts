@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { sendTeamMemberWelcome } from "@/lib/email";
 
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -83,6 +84,14 @@ export async function POST(req: NextRequest) {
       role: users.role,
       created_at: users.created_at,
     });
+
+  // Send welcome email (fire-and-forget)
+  sendTeamMemberWelcome({
+    to: d.email,
+    name: d.name,
+    role: d.role,
+    temporaryPassword: d.password,
+  }).catch(() => {});
 
   return NextResponse.json(newUser, { status: 201 });
 }

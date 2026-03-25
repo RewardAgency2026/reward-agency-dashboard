@@ -58,6 +58,7 @@ export const clients = pgTable("clients", {
   setup_monthly_fee: numeric("setup_monthly_fee", { precision: 10, scale: 2 }),
   setup_monthly_cost: numeric("setup_monthly_cost", { precision: 10, scale: 2 }),
   client_platform_fees: jsonb("client_platform_fees").$type<{ meta: number; google: number; tiktok: number; snapchat: number; linkedin: number } | null>(),
+  password_hash: text("password_hash"), // nullable: set via onboarding
   created_at: timestamp("created_at").notNull().default(now()),
 });
 

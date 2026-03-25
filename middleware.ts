@@ -17,6 +17,7 @@ const AGENCY_SEGMENTS = new Set([
 
 function routeType(pathname: string): "login" | "agency" | "client" | "affiliate" | "public" {
   if (pathname === "/login") return "login";
+  if (pathname === "/onboarding" || pathname.startsWith("/onboarding/")) return "public";
   if (pathname.startsWith("/portal")) return "client";
   // Must check "/affiliate/" (with trailing slash) before agency check
   // to avoid matching "/affiliates" as an affiliate route
@@ -41,26 +42,26 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn && type !== "public") {
     return NextResponse.redirect(new URL("/login", nextUrl));
   }
 
   if (type === "agency") {
-    if (!["admin", "team", "accountant"].includes(session.user.role)) {
+    if (!session || !["admin", "team", "accountant"].includes(session.user.role)) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
   if (type === "client") {
-    if (session.user.userType !== "client") {
+    if (!session || session.user.userType !== "client") {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
   if (type === "affiliate") {
-    if (session.user.userType !== "affiliate") {
+    if (!session || session.user.userType !== "affiliate") {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();

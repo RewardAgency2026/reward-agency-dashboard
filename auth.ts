@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { users, affiliates } from "@/db/schema";
+import { users, affiliates, clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -54,6 +54,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: affiliate.name,
             role: "affiliate",
             userType: "affiliate" as const,
+          };
+        }
+
+        // 3. Client
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.email, email))
+          .limit(1);
+
+        if (client?.password_hash) {
+          const valid = await bcrypt.compare(password, client.password_hash);
+          if (!valid) return null;
+          return {
+            id: client.id,
+            email: client.email,
+            name: client.name,
+            role: "client",
+            userType: "client" as const,
           };
         }
 

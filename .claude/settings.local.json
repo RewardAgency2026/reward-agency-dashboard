@@ -40,7 +40,11 @@
       "Bash(find /Users/simon/Projects/reward-agency-dashboard -name *.png)",
       "Bash(/dev/null grep:*)",
       "Bash(head:*)",
-      "Bash(find /Users/simon/Projects/reward-agency-dashboard/.next/static/css -name *.css)"
+      "Bash(find /Users/simon/Projects/reward-agency-dashboard/.next/static/css -name *.css)",
+      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/clients)",
+      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions)",
+      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate)",
+      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliate-commissions/[id]/mark-paid)"
     ]
   }
 }

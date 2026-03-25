@@ -7,6 +7,7 @@ import { z } from "zod";
 import { generateClientCode } from "@/lib/client-code";
 import { calculateWalletBalances, balanceFromData } from "@/lib/balance";
 import { logAudit } from "@/lib/audit";
+import { sendClientWelcome } from "@/lib/email";
 
 const platformFeesSchema = z.object({
   meta: z.number().min(0).max(100).default(0),
@@ -147,6 +148,8 @@ export async function POST(req: NextRequest) {
       balance_model: newClient.balance_model,
     },
   });
+
+  sendClientWelcome({ to: newClient.email, name: newClient.name }).catch(() => {});
 
   return NextResponse.json(newClient, { status: 201 });
 }

@@ -119,6 +119,9 @@ Single-row agency configuration.
 - `id` uuid PK, `agency_name`, `agency_crypto_fee_rate`
 - `iban_usd`, `iban_eur`, `legal_mentions`, `from_email`
 
+### `clients` — Sprint 7 addition
+- `password_hash` text nullable — set via public `/api/onboarding` so clients can log in
+
 ---
 
 ## Critical Business Rules
@@ -189,8 +192,8 @@ To be added in Sprint 4.
 | Sprint 5 | ✅ Done | Top Ups module (create, execute, reject, fee breakdown preview, platform icons, modal latency fixes, sidebar badge counter, 16 tests) |
 | Fee model | ✅ Done | top_up_fee_rate auto-derived from client_platform_fees; supplier_fee_rate from sub-supplier; both read-only on ad account |
 | Sprint 6 | ✅ Done | Transactions page (filters+CSV), Dashboard (KPIs+charts+recharts), Settings (Agency Info/Team/Audit Log tabs), delete top-up enhanced UX, new audit actions |
-| Sprint 7 | 🔄 Next | Affiliates module (commissions, referrals) |
-| Sprint 8 | ⏳ | P&L + Invoices |
+| Sprint 7 | ✅ Done | Affiliates CRUD, commission calculation, mark-paid, public onboarding page, client login, email notifications (Resend + console fallback), 13 tests |
+| Sprint 8 | 🔄 Next | P&L + Invoices |
 | Sprint 9 | ⏳ | Client portal (balance, ad accounts, transactions, top-up requests) |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
@@ -348,3 +351,6 @@ reward-agency-dashboard/
 - **Always manually check for duplicate headings, buttons, or UI elements after building new pages** — page server components own the header (title + action button); table/tab client components must not repeat them
 - **Never modify `tailwind.config.ts` or `globals.css`** without verifying the sidebar still renders correctly (dark navy `hsl(222,47%,11%)` background). CSS breakage is caused by stale `.next` cache — fix with `rm -rf .next && npm run dev`
 - **CSS breaks after cache goes stale** — if sidebar shows as unstyled text, run `pkill -f "next dev" && rm -rf .next && npm run dev`. The Tailwind config and sidebar component are correct; the issue is always a stale webpack cache
+- **Email notifications** — `lib/email.ts` uses Resend if `RESEND_API_KEY` is set; falls back to `console.log` if not. Add `RESEND_API_KEY=` and `NEXT_PUBLIC_APP_URL=http://localhost:3000` to `.env.local`
+- **Public routes** — `/onboarding` is fully public (no auth required). Middleware allows it without login. API `/api/onboarding` also has no auth check
+- **Client login** — clients can log in via `/login` using email + password set during onboarding (password stored in `clients.password_hash`)

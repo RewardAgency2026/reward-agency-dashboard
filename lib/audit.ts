@@ -10,7 +10,10 @@ export type AuditAction =
   | "client_created"
   | "client_updated"
   | "supplier_created"
-  | "supplier_updated";
+  | "supplier_updated"
+  | "affiliate_created"
+  | "affiliate_updated"
+  | "client_onboarded";
 
 export async function logAudit(params: {
   userId: string;
