@@ -38,9 +38,9 @@ interface Props {
 
 const TYPE_TABS = [
   { value: "", label: "All" },
-  { value: "payment", label: "Payment" },
+  { value: "payment", label: "Payment to Client" },
   { value: "topup", label: "Top Up" },
-  { value: "commission_fee", label: "Commission Fee" },
+  { value: "commission_fee", label: "Client Commission Fee" },
   { value: "withdraw", label: "Withdraw" },
   { value: "refund", label: "Refund" },
   { value: "spend_record", label: "Spend Record" },
@@ -56,9 +56,9 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  payment: "Payment",
+  payment: "Payment to Client",
   topup: "Top Up",
-  commission_fee: "Commission Fee",
+  commission_fee: "Client Commission Fee",
   withdraw: "Withdraw",
   refund: "Refund",
   spend_record: "Spend Record",
@@ -79,7 +79,7 @@ function exportCSV(rows: TransactionRow[]) {
     new Date(r.created_at).toLocaleDateString("en-GB"),
     r.client_code ?? "",
     r.client_name ?? "",
-    r.type,
+    TYPE_LABELS[r.type] ?? r.type,
     parseFloat(r.amount).toFixed(2),
     r.currency,
     r.description ?? "",

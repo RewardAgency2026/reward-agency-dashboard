@@ -97,9 +97,19 @@ const TABS = ["Overview", "Ad Accounts", "Transactions", "Top Ups"] as const;
 const TXN_TYPE_BADGE: Record<string, string> = {
   payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   topup: "bg-blue-50 text-blue-700 border border-blue-200",
+  commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
   withdraw: "bg-orange-50 text-orange-700 border border-orange-200",
   refund: "bg-red-50 text-red-700 border border-red-200",
   spend_record: "bg-gray-100 text-gray-600",
+};
+
+const TXN_TYPE_LABEL: Record<string, string> = {
+  payment: "Payment to Client",
+  topup: "Top Up",
+  commission_fee: "Client Commission Fee",
+  withdraw: "Withdraw",
+  refund: "Refund",
+  spend_record: "Spend Record",
 };
 
 const TXN_AMOUNT_COLOR: Record<string, string> = {
@@ -362,8 +372,8 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
                 {client.transactions.map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50/50">
                     <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", TXN_TYPE_BADGE[t.type] ?? "bg-gray-100 text-gray-600")}>
-                        {t.type.replace("_", " ")}
+                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TXN_TYPE_BADGE[t.type] ?? "bg-gray-100 text-gray-600")}>
+                        {TXN_TYPE_LABEL[t.type] ?? t.type}
                       </span>
                     </td>
                     <td className={cn("px-4 py-3 font-mono font-medium", TXN_AMOUNT_COLOR[t.type] ?? "text-gray-700")}>
