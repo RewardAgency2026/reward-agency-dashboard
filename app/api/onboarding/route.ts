@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  sendClientOnboardingWelcome({ to: client.email, name: client.name }).catch(() => {});
+  sendClientOnboardingWelcome({ to: client.email, name: client.name, clientCode: client.client_code, password: data.password }).catch(() => {});
 
   return NextResponse.json({
     id: client.id,

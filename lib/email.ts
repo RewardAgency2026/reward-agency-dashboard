@@ -1,16 +1,76 @@
-let Resend: typeof import("resend").Resend | undefined;
+import { Resend } from "resend";
 
-async function getResend() {
-  if (!process.env.RESEND_API_KEY) return null;
-  if (!Resend) {
-    const mod = await import("resend");
-    Resend = mod.Resend;
-  }
-  return new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@reward-agency.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+// ─── Shared template wrapper ──────────────────────────────────────────────────
+
+function emailWrapper(body: string) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+          <!-- Logo header -->
+          <tr>
+            <td style="padding-bottom:24px;text-align:center;">
+              <table cellpadding="0" cellspacing="0" style="display:inline-table;">
+                <tr>
+                  <td style="background:#3b4fd8;border-radius:12px;width:40px;height:40px;text-align:center;vertical-align:middle;">
+                    <span style="color:#fff;font-size:22px;font-weight:700;line-height:40px;">R</span>
+                  </td>
+                  <td style="padding-left:10px;vertical-align:middle;">
+                    <span style="color:#111827;font-size:18px;font-weight:600;">Reward Agency</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Card -->
+          <tr>
+            <td style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;padding:40px;">
+              ${body}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top:24px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} Reward Agency. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? "Reward Agency <noreply@reward-agency.com>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+function ctaButton(text: string, href: string) {
+  return `<table cellpadding="0" cellspacing="0" style="margin:28px 0;">
+    <tr>
+      <td style="background:#3b4fd8;border-radius:8px;">
+        <a href="${href}" style="display:inline-block;padding:13px 28px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">${text}</a>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function credentialRow(label: string, value: string) {
+  return `<tr>
+    <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;width:140px;vertical-align:top;">${label}</td>
+    <td style="padding:10px 16px;font-size:13px;color:#111827;font-family:monospace;background:#f9fafb;border-radius:6px;">${value}</td>
+  </tr>`;
+}
+
+// ─── sendTeamMemberWelcome ────────────────────────────────────────────────────
 
 export async function sendTeamMemberWelcome(params: {
   to: string;
@@ -18,46 +78,78 @@ export async function sendTeamMemberWelcome(params: {
   role: string;
   temporaryPassword: string;
 }) {
-  const resend = await getResend();
   if (!resend) {
     console.log("[email] sendTeamMemberWelcome →", params.to, { name: params.name, role: params.role });
     return;
   }
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Welcome to Reward Agency Dashboard</h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hi ${params.name}, your account has been created with the role <strong style="color:#111827;">${params.role}</strong>.</p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <tbody>
+        ${credentialRow("Email", params.to)}
+        ${credentialRow("Password", params.temporaryPassword)}
+      </tbody>
+    </table>
+
+    ${ctaButton("Login Now", `${APP_URL}/login`)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">Please change your password after your first login.</p>
+  `;
+
   await resend.emails.send({
     from: FROM,
     to: params.to,
-    subject: "Welcome to Reward Agency — Your Account Details",
-    html: `
-      <p>Hi ${params.name},</p>
-      <p>Your Reward Agency account has been created with the role <strong>${params.role}</strong>.</p>
-      <p><strong>Login:</strong> ${params.to}<br>
-      <strong>Password:</strong> ${params.temporaryPassword}</p>
-      <p><a href="${APP_URL}/login">Log in here</a></p>
-      <p>Please change your password after first login.</p>
-    `,
+    subject: "Welcome to Reward Agency Dashboard",
+    html: emailWrapper(body),
   }).catch((err: unknown) => console.error("[email] sendTeamMemberWelcome failed:", err));
 }
+
+// ─── sendClientWelcome ────────────────────────────────────────────────────────
 
 export async function sendClientWelcome(params: {
   to: string;
   name: string;
+  clientCode: string;
+  password?: string;
 }) {
-  const resend = await getResend();
   if (!resend) {
-    console.log("[email] sendClientWelcome →", params.to, { name: params.name });
+    console.log("[email] sendClientWelcome →", params.to, { name: params.name, clientCode: params.clientCode });
     return;
   }
+
+  const credRows = [
+    credentialRow("Client Code", params.clientCode),
+    credentialRow("Email", params.to),
+    ...(params.password ? [credentialRow("Password", params.password)] : []),
+  ].join("\n");
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Welcome to Reward Agency</h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hi ${params.name}, your client portal is ready.</p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <tbody>
+        ${credRows}
+      </tbody>
+    </table>
+
+    ${ctaButton("Access My Portal", `${APP_URL}/login`)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">Your wallet and ad accounts are ready to use. Your account manager will be in touch shortly.</p>
+  `;
+
   await resend.emails.send({
     from: FROM,
     to: params.to,
-    subject: "Welcome to Reward Agency",
-    html: `
-      <p>Hi ${params.name},</p>
-      <p>Your Reward Agency client account has been created.</p>
-      <p>Your account manager will be in touch shortly.</p>
-    `,
+    subject: "Welcome to Reward Agency — Your Portal Access",
+    html: emailWrapper(body),
   }).catch((err: unknown) => console.error("[email] sendClientWelcome failed:", err));
 }
+
+// ─── sendAffiliateOnboardingWelcome ──────────────────────────────────────────
 
 export async function sendAffiliateOnboardingWelcome(params: {
   to: string;
@@ -65,7 +157,6 @@ export async function sendAffiliateOnboardingWelcome(params: {
   affiliateCode: string;
   referralLink: string;
 }) {
-  const resend = await getResend();
   if (!resend) {
     console.log("[email] sendAffiliateOnboardingWelcome →", params.to, {
       name: params.name,
@@ -73,37 +164,39 @@ export async function sendAffiliateOnboardingWelcome(params: {
     });
     return;
   }
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Welcome to the Affiliate Program</h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hi ${params.name}, you've been added as a Reward Agency affiliate partner.</p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <tbody>
+        ${credentialRow("Affiliate Code", params.affiliateCode)}
+        ${credentialRow("Referral Link", params.referralLink)}
+      </tbody>
+    </table>
+
+    ${ctaButton("Go to Dashboard", `${APP_URL}/login`)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">Share your referral link to earn commissions on referred client top-ups.</p>
+  `;
+
   await resend.emails.send({
     from: FROM,
     to: params.to,
     subject: "Welcome to Reward Agency Affiliate Program",
-    html: `
-      <p>Hi ${params.name},</p>
-      <p>Welcome to the Reward Agency Affiliate Program!</p>
-      <p><strong>Your affiliate code:</strong> ${params.affiliateCode}<br>
-      <strong>Your referral link:</strong> <a href="${params.referralLink}">${params.referralLink}</a></p>
-      <p><a href="${APP_URL}/login">Log in to your dashboard</a></p>
-    `,
+    html: emailWrapper(body),
   }).catch((err: unknown) => console.error("[email] sendAffiliateOnboardingWelcome failed:", err));
 }
+
+// ─── sendClientOnboardingWelcome (alias for sendClientWelcome) ────────────────
+// Kept for backwards compatibility — onboarding route calls this
 
 export async function sendClientOnboardingWelcome(params: {
   to: string;
   name: string;
+  clientCode: string;
+  password: string;
 }) {
-  const resend = await getResend();
-  if (!resend) {
-    console.log("[email] sendClientOnboardingWelcome →", params.to, { name: params.name });
-    return;
-  }
-  await resend.emails.send({
-    from: FROM,
-    to: params.to,
-    subject: "Welcome to Reward Agency — Your Account is Ready",
-    html: `
-      <p>Hi ${params.name},</p>
-      <p>Your Reward Agency client account has been created and is ready to use.</p>
-      <p><a href="${APP_URL}/portal/dashboard">Log in to your client portal</a></p>
-    `,
-  }).catch((err: unknown) => console.error("[email] sendClientOnboardingWelcome failed:", err));
+  return sendClientWelcome(params);
 }

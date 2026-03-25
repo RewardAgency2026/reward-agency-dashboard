@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  sendClientWelcome({ to: newClient.email, name: newClient.name }).catch(() => {});
+  sendClientWelcome({ to: newClient.email, name: newClient.name, clientCode: newClient.client_code }).catch(() => {});
 
   return NextResponse.json(newClient, { status: 201 });
 }
