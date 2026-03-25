@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Affiliate {
   id: string;
@@ -109,24 +110,33 @@ export function AddClientModal({ affiliates, onSuccess }: Props) {
         setError(data.error ?? "Failed to create client");
         return;
       }
+      const c = data.client;
       // Optimistic update — close immediately, update list, then background sync
       const affiliateObj = affiliates.find((a) => a.id === form.affiliate_id);
       onSuccess?.({
-        id: data.id,
-        client_code: data.client_code,
-        name: data.name,
-        email: data.email,
-        company: data.company ?? "",
-        status: data.status,
-        balance_model: data.balance_model,
-        billing_currency: data.billing_currency,
+        id: c.id,
+        client_code: c.client_code,
+        name: c.name,
+        email: c.email,
+        company: c.company ?? "",
+        status: c.status,
+        balance_model: c.balance_model,
+        billing_currency: c.billing_currency,
         wallet_balance: 0,
-        has_setup: data.has_setup ?? false,
+        has_setup: c.has_setup ?? false,
         affiliate_name: affiliateObj?.name ?? null,
-        created_at: data.created_at,
+        created_at: c.created_at,
       });
       handleClose();
       router.refresh();
+      if (data.emailSent) {
+        toast.success(`Client ${c.client_code} created. Welcome email sent to ${c.email} ✓`);
+      } else {
+        toast(`Client ${c.client_code} created, but email failed to send. Please share credentials manually.`, {
+          icon: "⚠️",
+          style: { background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" },
+        });
+      }
     } catch {
       setError("Network error");
     } finally {

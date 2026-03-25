@@ -85,13 +85,16 @@ export async function POST(req: NextRequest) {
       created_at: users.created_at,
     });
 
-  // Send welcome email (fire-and-forget)
-  sendTeamMemberWelcome({
+  const emailResult = await sendTeamMemberWelcome({
     to: d.email,
     name: d.name,
     role: d.role,
     temporaryPassword: d.password,
-  }).catch(() => {});
+  });
 
-  return NextResponse.json(newUser, { status: 201 });
+  return NextResponse.json({
+    user: newUser,
+    emailSent: emailResult.success,
+    emailError: emailResult.success ? null : emailResult.error,
+  }, { status: 201 });
 }

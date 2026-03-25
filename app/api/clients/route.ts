@@ -149,7 +149,11 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  sendClientWelcome({ to: newClient.email, name: newClient.name, clientCode: newClient.client_code }).catch(() => {});
+  const emailResult = await sendClientWelcome({ to: newClient.email, name: newClient.name, clientCode: newClient.client_code });
 
-  return NextResponse.json(newClient, { status: 201 });
+  return NextResponse.json({
+    client: newClient,
+    emailSent: emailResult.success,
+    emailError: emailResult.success ? null : emailResult.error,
+  }, { status: 201 });
 }

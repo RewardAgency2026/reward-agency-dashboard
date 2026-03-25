@@ -117,7 +117,7 @@ before(async () => {
     billing_currency: "USD",
     client_platform_fees: { meta: 5.0 },
   });
-  richClientId = richClient.id;
+  richClientId = richClient.client.id;
 
   // Credit rich client $1000
   await api("POST", `/api/clients/${richClientId}/credit`, {
@@ -135,7 +135,7 @@ before(async () => {
     billing_currency: "USD",
     client_platform_fees: { meta: 5.0 },
   });
-  poorClientId = poorClient.id;
+  poorClientId = poorClient.client.id;
 
   // Credit poor client $10
   await api("POST", `/api/clients/${poorClientId}/credit`, {

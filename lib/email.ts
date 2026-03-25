@@ -4,6 +4,8 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@reward-agency.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+export type EmailResult = { success: true } | { success: false; error: string };
+
 // ─── Shared template wrapper ──────────────────────────────────────────────────
 
 function emailWrapper(body: string) {
@@ -77,10 +79,10 @@ export async function sendTeamMemberWelcome(params: {
   name: string;
   role: string;
   temporaryPassword: string;
-}) {
+}): Promise<EmailResult> {
   if (!resend) {
     console.log("[email] sendTeamMemberWelcome →", params.to, { name: params.name, role: params.role });
-    return;
+    return { success: false, error: "RESEND_API_KEY not configured" };
   }
 
   const body = `
@@ -99,12 +101,19 @@ export async function sendTeamMemberWelcome(params: {
     <p style="margin:0;font-size:13px;color:#9ca3af;">Please change your password after your first login.</p>
   `;
 
-  await resend.emails.send({
-    from: FROM,
-    to: params.to,
-    subject: "Welcome to Reward Agency Dashboard",
-    html: emailWrapper(body),
-  }).catch((err: unknown) => console.error("[email] sendTeamMemberWelcome failed:", err));
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: "Welcome to Reward Agency Dashboard",
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendTeamMemberWelcome failed:", message);
+    return { success: false, error: message };
+  }
 }
 
 // ─── sendClientWelcome ────────────────────────────────────────────────────────
@@ -114,10 +123,10 @@ export async function sendClientWelcome(params: {
   name: string;
   clientCode: string;
   password?: string;
-}) {
+}): Promise<EmailResult> {
   if (!resend) {
     console.log("[email] sendClientWelcome →", params.to, { name: params.name, clientCode: params.clientCode });
-    return;
+    return { success: false, error: "RESEND_API_KEY not configured" };
   }
 
   const credRows = [
@@ -141,12 +150,19 @@ export async function sendClientWelcome(params: {
     <p style="margin:0;font-size:13px;color:#9ca3af;">Your wallet and ad accounts are ready to use. Your account manager will be in touch shortly.</p>
   `;
 
-  await resend.emails.send({
-    from: FROM,
-    to: params.to,
-    subject: "Welcome to Reward Agency — Your Portal Access",
-    html: emailWrapper(body),
-  }).catch((err: unknown) => console.error("[email] sendClientWelcome failed:", err));
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: "Welcome to Reward Agency — Your Portal Access",
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendClientWelcome failed:", message);
+    return { success: false, error: message };
+  }
 }
 
 // ─── sendAffiliateOnboardingWelcome ──────────────────────────────────────────
@@ -156,13 +172,13 @@ export async function sendAffiliateOnboardingWelcome(params: {
   name: string;
   affiliateCode: string;
   referralLink: string;
-}) {
+}): Promise<EmailResult> {
   if (!resend) {
     console.log("[email] sendAffiliateOnboardingWelcome →", params.to, {
       name: params.name,
       affiliateCode: params.affiliateCode,
     });
-    return;
+    return { success: false, error: "RESEND_API_KEY not configured" };
   }
 
   const body = `
@@ -181,22 +197,28 @@ export async function sendAffiliateOnboardingWelcome(params: {
     <p style="margin:0;font-size:13px;color:#9ca3af;">Share your referral link to earn commissions on referred client top-ups.</p>
   `;
 
-  await resend.emails.send({
-    from: FROM,
-    to: params.to,
-    subject: "Welcome to Reward Agency Affiliate Program",
-    html: emailWrapper(body),
-  }).catch((err: unknown) => console.error("[email] sendAffiliateOnboardingWelcome failed:", err));
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: "Welcome to Reward Agency Affiliate Program",
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendAffiliateOnboardingWelcome failed:", message);
+    return { success: false, error: message };
+  }
 }
 
 // ─── sendClientOnboardingWelcome (alias for sendClientWelcome) ────────────────
-// Kept for backwards compatibility — onboarding route calls this
 
 export async function sendClientOnboardingWelcome(params: {
   to: string;
   name: string;
   clientCode: string;
   password: string;
-}) {
+}): Promise<EmailResult> {
   return sendClientWelcome(params);
 }

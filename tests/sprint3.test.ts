@@ -102,11 +102,11 @@ describe("POST /api/clients — create client", () => {
       crypto_fee_rate: 2,
     });
     assert.equal(status, 201, `Expected 201, got ${status}: ${JSON.stringify(data)}`);
-    assert.ok(data.id, "Response should have id");
-    assert.match(data.client_code, /^RWD-\d{4}$/, `client_code format invalid: ${data.client_code}`);
-    assert.equal(data.balance_model, "classic");
-    assert.equal(data.billing_currency, "USD");
-    testClientId = data.id;
+    assert.ok(data.client.id, "Response should have id");
+    assert.match(data.client.client_code, /^RWD-\d{4}$/, `client_code format invalid: ${data.client.client_code}`);
+    assert.equal(data.client.balance_model, "classic");
+    assert.equal(data.client.billing_currency, "USD");
+    testClientId = data.client.id;
   });
 
   it("rejects duplicate email", async () => {
@@ -250,8 +250,8 @@ describe("Wallet balance calculations", () => {
       billing_currency: "USD",
       crypto_fee_rate: 0,
     });
-    assert.ok(created.id, "Dynamic client should be created");
-    const dynId: string = created.id;
+    assert.ok(created.client.id, "Dynamic client should be created");
+    const dynId: string = created.client.id;
 
     // Credit 1000 USD
     await api("POST", `/api/clients/${dynId}/credit`, { amount: 1000, currency: "USD" });
@@ -286,13 +286,13 @@ describe("POST /api/clients — new fields (notes, setup, platform fees)", () =>
       client_platform_fees: { meta: 2, google: 1.5, tiktok: 0, snapchat: 0, linkedin: 0 },
     });
     assert.equal(status, 201, `Expected 201, got ${status}: ${JSON.stringify(data)}`);
-    assert.equal(data.notes, "Internal test notes");
-    assert.equal(data.has_setup, true);
-    assert.equal(parseFloat(data.setup_monthly_fee), 500);
-    assert.equal(parseFloat(data.setup_monthly_cost), 200);
-    assert.ok(data.client_platform_fees, "Should have client_platform_fees");
-    assert.equal(data.client_platform_fees.meta, 2);
-    assert.equal(data.client_platform_fees.google, 1.5);
+    assert.equal(data.client.notes, "Internal test notes");
+    assert.equal(data.client.has_setup, true);
+    assert.equal(parseFloat(data.client.setup_monthly_fee), 500);
+    assert.equal(parseFloat(data.client.setup_monthly_cost), 200);
+    assert.ok(data.client.client_platform_fees, "Should have client_platform_fees");
+    assert.equal(data.client.client_platform_fees.meta, 2);
+    assert.equal(data.client.client_platform_fees.google, 1.5);
   });
 
   it("GET /api/clients/[id] returns new fields", async () => {

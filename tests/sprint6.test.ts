@@ -94,7 +94,7 @@ before(async () => {
     balance_model: "classic", billing_currency: "USD",
     client_platform_fees: { meta: 5.0 },
   });
-  testClientId = client.id;
+  testClientId = client.client.id;
   await api("POST", `/api/clients/${testClientId}/credit`, { amount: 500, currency: "USD", is_crypto: false });
 
   // Create ad account

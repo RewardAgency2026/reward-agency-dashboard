@@ -67,12 +67,14 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  sendClientOnboardingWelcome({ to: client.email, name: client.name, clientCode: client.client_code, password: data.password }).catch(() => {});
+  const emailResult = await sendClientOnboardingWelcome({ to: client.email, name: client.name, clientCode: client.client_code, password: data.password });
 
   return NextResponse.json({
     id: client.id,
     client_code: client.client_code,
     name: client.name,
     email: client.email,
+    emailSent: emailResult.success,
+    emailError: emailResult.success ? null : emailResult.error,
   }, { status: 201 });
 }

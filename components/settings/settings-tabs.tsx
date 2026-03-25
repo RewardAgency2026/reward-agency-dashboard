@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuditLogTable } from "@/components/audit-log/audit-log-table";
+import toast from "react-hot-toast";
 
 const TABS = ["Agency Info", "Team", "Audit Log"] as const;
 type Tab = (typeof TABS)[number];
@@ -233,11 +234,20 @@ function TeamTab() {
       }
       queryClient.invalidateQueries({ queryKey: ["agency-users"] });
       setShowModal(false);
+      const capturedEmail = email;
       setName("");
       setEmail("");
       setPassword("");
       setShowPassword(false);
       setRole("team");
+      if (data.emailSent) {
+        toast.success(`Team member created. Welcome email sent to ${capturedEmail} ✓`);
+      } else {
+        toast(`Team member created, but email failed to send. Please share credentials manually.\nError: ${data.emailError ?? "Unknown error"}`, {
+          icon: "⚠️",
+          style: { background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" },
+        });
+      }
     } finally {
       setSubmitting(false);
     }

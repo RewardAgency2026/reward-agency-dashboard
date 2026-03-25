@@ -97,7 +97,7 @@ before(async () => {
     billing_currency: "USD",
   });
   assert.equal(status, 201, `Failed to create test client: ${JSON.stringify(data)}`);
-  testClientId = data.id;
+  testClientId = data.client.id;
 });
 
 after(async () => {
