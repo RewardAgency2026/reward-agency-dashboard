@@ -207,6 +207,8 @@ export const affiliate_commissions = pgTable(
     total_topups: numeric("total_topups", { precision: 12, scale: 2 }).notNull().default("0"),
     total_commissions_gross: numeric("total_commissions_gross", { precision: 12, scale: 2 }).notNull().default("0"),
     total_supplier_fees: numeric("total_supplier_fees", { precision: 12, scale: 2 }).notNull().default("0"),
+    total_crypto_fees: numeric("total_crypto_fees", { precision: 12, scale: 2 }).notNull().default("0"),
+    total_bank_fees: numeric("total_bank_fees", { precision: 12, scale: 2 }).notNull().default("0"),
     total_profit_net: numeric("total_profit_net", { precision: 12, scale: 2 }).notNull().default("0"),
     commission_rate: numeric("commission_rate", { precision: 5, scale: 2 }).notNull(),
     commission_amount: numeric("commission_amount", { precision: 12, scale: 2 }).notNull().default("0"),

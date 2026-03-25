@@ -1,0 +1,2 @@
+ALTER TABLE "affiliate_commissions" ADD COLUMN "total_crypto_fees" numeric(12, 2) DEFAULT '0' NOT NULL;--> statement-breakpoint
+ALTER TABLE "affiliate_commissions" ADD COLUMN "total_bank_fees" numeric(12, 2) DEFAULT '0' NOT NULL;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { affiliates, clients, transactions, affiliate_commissions } from "@/db/schema";
+import { affiliates, clients, transactions, affiliate_commissions, supplier_payments } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -42,14 +42,14 @@ export async function POST(
 
   let total_commissions_gross = 0;
   let total_supplier_fees = 0;
+  let total_crypto_fees = 0;
+  let total_bank_fees = 0;
   let total_topups = 0;
 
   if (clientIds.length > 0) {
     // commission_fee transactions = top-up fees charged to clients
     const [commFees] = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(top_up_fee_amount), 0)`,
-      })
+      .select({ total: sql<string>`COALESCE(SUM(top_up_fee_amount), 0)` })
       .from(transactions)
       .where(
         and(
@@ -62,9 +62,7 @@ export async function POST(
 
     // supplier_fee_amount from topup transactions
     const [supFees] = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(supplier_fee_amount), 0)`,
-      })
+      .select({ total: sql<string>`COALESCE(SUM(supplier_fee_amount), 0)` })
       .from(transactions)
       .where(
         and(
@@ -75,11 +73,22 @@ export async function POST(
       );
     total_supplier_fees = parseFloat(supFees?.total ?? "0");
 
+    // crypto_fee_amount from payment transactions (crypto payments by clients)
+    const [cryptoFees] = await db
+      .select({ total: sql<string>`COALESCE(SUM(crypto_fee_amount), 0)` })
+      .from(transactions)
+      .where(
+        and(
+          inArray(transactions.client_id, clientIds),
+          eq(transactions.type, "payment"),
+          sql`created_at >= ${periodStart.toISOString()} AND created_at < ${periodEnd.toISOString()}`
+        )
+      );
+    total_crypto_fees = parseFloat(cryptoFees?.total ?? "0");
+
     // Total topup amounts
     const [topups] = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(amount), 0)`,
-      })
+      .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
       .from(transactions)
       .where(
         and(
@@ -89,9 +98,40 @@ export async function POST(
         )
       );
     total_topups = parseFloat(topups?.total ?? "0");
+
+    // bank_fees from supplier_payments for suppliers who executed topups for these clients in this period
+    const supplierIdsResult = await db
+      .selectDistinct({ supplier_id: transactions.supplier_id })
+      .from(transactions)
+      .where(
+        and(
+          inArray(transactions.client_id, clientIds),
+          eq(transactions.type, "topup"),
+          sql`${transactions.supplier_id} IS NOT NULL`,
+          sql`created_at >= ${periodStart.toISOString()} AND created_at < ${periodEnd.toISOString()}`
+        )
+      );
+
+    const supplierIds = supplierIdsResult
+      .map((r) => r.supplier_id)
+      .filter((id): id is string => id !== null);
+
+    if (supplierIds.length > 0) {
+      const [bankFees] = await db
+        .select({ total: sql<string>`COALESCE(SUM(bank_fees), 0)` })
+        .from(supplier_payments)
+        .where(
+          and(
+            inArray(supplier_payments.supplier_id, supplierIds),
+            sql`created_at >= ${periodStart.toISOString()} AND created_at < ${periodEnd.toISOString()}`
+          )
+        );
+      total_bank_fees = parseFloat(bankFees?.total ?? "0");
+    }
   }
 
-  const total_profit_net = total_commissions_gross - total_supplier_fees;
+  // Profit Final = commissions_gross - supplier_fees - crypto_fees - bank_fees
+  const total_profit_net = total_commissions_gross - total_supplier_fees - total_crypto_fees - total_bank_fees;
   const commission_rate = parseFloat(affiliate.commission_rate);
   const commission_amount = total_profit_net * (commission_rate / 100);
 
@@ -116,6 +156,8 @@ export async function POST(
     total_topups: String(total_topups),
     total_commissions_gross: String(total_commissions_gross),
     total_supplier_fees: String(total_supplier_fees),
+    total_crypto_fees: String(total_crypto_fees),
+    total_bank_fees: String(total_bank_fees),
     total_profit_net: String(total_profit_net),
     commission_rate: String(commission_rate),
     commission_amount: String(commission_amount),

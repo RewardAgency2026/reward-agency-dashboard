@@ -183,7 +183,7 @@ describe("POST /api/onboarding (public)", () => {
 // ── 4: Commission calculation ─────────────────────────────────────────────────
 
 describe("POST /api/affiliates/[id]/commissions/calculate", () => {
-  it("calculates commission for a period", async () => {
+  it("calculates commission for a period with full breakdown", async () => {
     const { status, data } = await api("POST", `/api/affiliates/${testAffiliateId}/commissions/calculate`, {
       year: 2026,
       month: 1,
@@ -192,7 +192,24 @@ describe("POST /api/affiliates/[id]/commissions/calculate", () => {
     assert.ok(data.id, "should return commission record");
     assert.equal(data.period_year, 2026);
     assert.equal(data.period_month, 1);
-    assert.ok(typeof parseFloat(data.commission_amount) === "number");
+    // New formula fields
+    assert.ok("total_commissions_gross" in data, "should have total_commissions_gross");
+    assert.ok("total_supplier_fees" in data, "should have total_supplier_fees");
+    assert.ok("total_crypto_fees" in data, "should have total_crypto_fees");
+    assert.ok("total_bank_fees" in data, "should have total_bank_fees");
+    assert.ok("total_profit_net" in data, "should have total_profit_net");
+    assert.ok("commission_amount" in data, "should have commission_amount");
+    // Verify formula: profit_net = gross - supplier_fees - crypto_fees - bank_fees
+    const gross = parseFloat(data.total_commissions_gross);
+    const supFees = parseFloat(data.total_supplier_fees);
+    const cryptoFees = parseFloat(data.total_crypto_fees);
+    const bankFees = parseFloat(data.total_bank_fees);
+    const profitNet = parseFloat(data.total_profit_net);
+    assert.ok(Math.abs(profitNet - (gross - supFees - cryptoFees - bankFees)) < 0.01, "profit_net formula should be correct");
+    // commission_amount = profit_net × rate%
+    const rate = parseFloat(data.commission_rate);
+    const commissionAmount = parseFloat(data.commission_amount);
+    assert.ok(Math.abs(commissionAmount - profitNet * rate / 100) < 0.01, "commission_amount formula should be correct");
     testCommissionId = data.id;
   });
 

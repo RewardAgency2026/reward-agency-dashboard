@@ -31,6 +31,8 @@ interface CommissionRow {
   total_topups: string;
   total_commissions_gross: string;
   total_supplier_fees: string;
+  total_crypto_fees: string;
+  total_bank_fees: string;
   total_profit_net: string;
   commission_rate: string;
   commission_amount: string;
@@ -52,6 +54,11 @@ const COMM_STATUS_BADGE: Record<string, string> = {
   calculated: "bg-blue-50 text-blue-700 border border-blue-200",
   paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
+
+function fmt(val: string | null | undefined) {
+  const n = parseFloat(val ?? "0");
+  return isNaN(n) ? "0.00" : n.toFixed(2);
+}
 
 interface Props {
   affiliateId: string;
@@ -95,6 +102,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["affiliate-commissions", affiliateId] });
+      queryClient.invalidateQueries({ queryKey: ["affiliate", affiliateId] });
       setCalcError("");
     },
     onError: (e: Error) => setCalcError(e.message),
@@ -107,7 +115,10 @@ export function AffiliateTabs({ affiliateId }: Props) {
         if (!r.ok) throw new Error(data.error ?? "Failed");
         return data;
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["affiliate-commissions", affiliateId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["affiliate-commissions", affiliateId] });
+      queryClient.invalidateQueries({ queryKey: ["affiliate", affiliateId] });
+    },
   });
 
   if (affLoading) {
@@ -141,15 +152,15 @@ export function AffiliateTabs({ affiliateId }: Props) {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500 mb-1">Commission Rate</p>
-          <p className="text-2xl font-bold text-gray-900">{parseFloat(affiliate.commission_rate).toFixed(1)}%</p>
+          <p className="text-2xl font-bold text-gray-900">{fmt(affiliate.commission_rate)}%</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500 mb-1">Referred Clients</p>
-          <p className="text-2xl font-bold text-gray-900">{affiliate.clients_count}</p>
+          <p className="text-2xl font-bold text-gray-900">{affiliate.clients_count ?? 0}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500 mb-1">Total Commissions Paid</p>
-          <p className="text-2xl font-bold text-gray-900">${parseFloat(affiliate.commissions_paid).toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-900">${fmt(affiliate.commissions_paid)}</p>
         </div>
       </div>
 
@@ -265,10 +276,14 @@ export function AffiliateTabs({ affiliateId }: Props) {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Period</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Clients</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Gross Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Supplier Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Net Profit</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Commission</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Total Top Ups</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Client Commissions</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Provider Fees</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Crypto Fees</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Bank Fees</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Profit Final</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Commission Due</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -276,12 +291,16 @@ export function AffiliateTabs({ affiliateId }: Props) {
                 <tbody className="divide-y divide-gray-100">
                   {commissions.map((c) => (
                     <tr key={c.id} className="hover:bg-gray-50/50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{MONTH_NAMES[c.period_month - 1]} {c.period_year}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{MONTH_NAMES[c.period_month - 1]} {c.period_year}</td>
                       <td className="px-4 py-3 text-right text-gray-700">{c.clients_count}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-700">${parseFloat(c.total_commissions_gross).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-700">${parseFloat(c.total_supplier_fees).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-700">${parseFloat(c.total_profit_net).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-semibold text-gray-900">${parseFloat(c.commission_amount).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">${fmt(c.total_topups)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-700">${fmt(c.total_commissions_gross)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_supplier_fees)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_crypto_fees)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_bank_fees)}</td>
+                      <td className="px-4 py-3 text-right font-mono font-medium text-gray-900">${fmt(c.total_profit_net)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">{fmt(c.commission_rate)}%</td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">${fmt(c.commission_amount)}</td>
                       <td className="px-4 py-3">
                         <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium capitalize", COMM_STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500")}>
                           {c.status}
@@ -292,7 +311,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
                           <button
                             onClick={() => markPaidMutation.mutate(c.id)}
                             disabled={markPaidMutation.isPending}
-                            className="text-xs text-[hsl(236,85%,55%)] hover:underline disabled:opacity-50"
+                            className="text-xs text-[hsl(236,85%,55%)] hover:underline disabled:opacity-50 whitespace-nowrap"
                           >
                             Mark Paid
                           </button>
@@ -324,7 +343,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Commission Rate</p>
-              <p className="text-sm text-gray-900">{parseFloat(affiliate.commission_rate).toFixed(2)}%</p>
+              <p className="text-sm text-gray-900">{fmt(affiliate.commission_rate)}%</p>
             </div>
             {affiliate.billing_address && (
               <div>

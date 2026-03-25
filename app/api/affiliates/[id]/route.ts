@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { affiliates } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 
@@ -23,7 +23,26 @@ export async function GET(
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [affiliate] = await db.select().from(affiliates).where(eq(affiliates.id, params.id)).limit(1);
+  const [affiliate] = await db
+    .select({
+      id: affiliates.id,
+      affiliate_code: affiliates.affiliate_code,
+      name: affiliates.name,
+      email: affiliates.email,
+      company: affiliates.company,
+      commission_rate: affiliates.commission_rate,
+      referral_link: affiliates.referral_link,
+      billing_address: affiliates.billing_address,
+      billing_vat: affiliates.billing_vat,
+      status: affiliates.status,
+      created_at: affiliates.created_at,
+      clients_count: sql<number>`(SELECT COUNT(*) FROM clients WHERE clients.affiliate_id = ${affiliates.id})`,
+      commissions_paid: sql<string>`COALESCE((SELECT SUM(commission_amount) FROM affiliate_commissions WHERE affiliate_commissions.affiliate_id = ${affiliates.id} AND affiliate_commissions.status = 'paid'), 0)`,
+    })
+    .from(affiliates)
+    .where(eq(affiliates.id, params.id))
+    .limit(1);
+
   if (!affiliate) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json(affiliate);
