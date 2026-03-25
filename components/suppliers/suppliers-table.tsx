@@ -45,11 +45,11 @@ const PLATFORM_BADGE: Record<string, string> = {
   google: "bg-red-100 text-red-700",
   tiktok: "bg-gray-900 text-white",
   snapchat: "bg-yellow-100 text-yellow-800",
-  pinterest: "bg-rose-100 text-rose-700",
+  linkedin: "bg-sky-100 text-sky-700",
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snap", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snap", linkedin: "LinkedIn",
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -72,7 +72,7 @@ function getPlatformBadges(subAccounts: SubAccount[]) {
   return Array.from(seen);
 }
 
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
 
 export function SuppliersTable({ suppliers }: Props) {
   const [search, setSearch] = useState("");
@@ -189,7 +189,7 @@ export function SuppliersTable({ suppliers }: Props) {
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Google</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">TikTok</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Snapchat</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Pinterest</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">LinkedIn</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                                   </tr>
                                 </thead>

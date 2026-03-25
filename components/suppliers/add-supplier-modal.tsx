@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Plus, Trash2 } from "lucide-react";
 
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 type PlatformKey = typeof PLATFORMS[number];
@@ -17,7 +17,7 @@ interface SubAccountDraft {
   fees: Fees;
 }
 
-const emptyFees = (): Fees => ({ meta: "", google: "", tiktok: "", snapchat: "", pinterest: "" });
+const emptyFees = (): Fees => ({ meta: "", google: "", tiktok: "", snapchat: "", linkedin: "" });
 const emptySubAccount = (): SubAccountDraft => ({ name: "", fees: emptyFees() });
 
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";

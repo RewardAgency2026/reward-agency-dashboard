@@ -31,12 +31,12 @@ interface Props {
   onSuccess?: (client: ClientRow) => void;
 }
 
-type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; pinterest: number };
-const PLATFORMS: (keyof PlatformFees)[] = ["meta", "google", "tiktok", "snapchat", "pinterest"];
+type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; linkedin: number };
+const PLATFORMS: (keyof PlatformFees)[] = ["meta", "google", "tiktok", "snapchat", "linkedin"];
 const PLATFORM_LABELS: Record<keyof PlatformFees, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
-const DEFAULT_PLATFORM_FEES: PlatformFees = { meta: 0, google: 0, tiktok: 0, snapchat: 0, pinterest: 0 };
+const DEFAULT_PLATFORM_FEES: PlatformFees = { meta: 0, google: 0, tiktok: 0, snapchat: 0, linkedin: 0 };
 
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 

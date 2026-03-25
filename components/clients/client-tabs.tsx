@@ -45,7 +45,7 @@ interface SupplierOption {
   sub_accounts: Array<{ id: string; name: string; platform_fees: Record<string, number> }>;
 }
 
-type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; pinterest: number };
+type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; linkedin: number };
 
 interface Client {
   id: string;
@@ -124,7 +124,7 @@ const AD_ACCOUNT_STATUS_BADGE: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<keyof PlatformFees, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 function formatDate(iso: string) {

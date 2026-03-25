@@ -13,7 +13,7 @@ const platformFeesSchema = z.object({
   google: z.number().min(0).max(100).default(0),
   tiktok: z.number().min(0).max(100).default(0),
   snapchat: z.number().min(0).max(100).default(0),
-  pinterest: z.number().min(0).max(100).default(0),
+  linkedin: z.number().min(0).max(100).default(0),
 });
 
 const createSchema = z.object({

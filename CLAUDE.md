@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A financial management dashboard for **Reward Agency**, a digital advertising agency that manages ad spend on behalf of clients across Meta, Google, TikTok, Snapchat, and Pinterest.
+A financial management dashboard for **Reward Agency**, a digital advertising agency that manages ad spend on behalf of clients across Meta, Google, TikTok, Snapchat, and LinkedIn.
 
 **Three portals:**
 - **Agency portal** (`/dashboard`, `/clients`, etc.) — for admin, team, and accountant roles
@@ -63,7 +63,7 @@ Client accounts with wallet configuration.
 - `has_setup` boolean default false
 - `setup_monthly_fee` numeric(10,2) nullable — charged to client
 - `setup_monthly_cost` numeric(10,2) nullable — internal cost
-- `client_platform_fees` jsonb nullable — `{ meta, google, tiktok, snapchat, pinterest }` (% rates)
+- `client_platform_fees` jsonb nullable — `{ meta, google, tiktok, snapchat, linkedin }` (% rates)
 
 ### `suppliers`
 Ad platform suppliers/resellers.
@@ -77,7 +77,7 @@ Per-supplier, per-platform fee rates.
 ### `ad_accounts`
 Ad accounts linked to a client and supplier.
 - `id` uuid PK, `client_id` FK → clients (cascade), `supplier_id` FK → suppliers (restrict)
-- `platform` (meta|google|tiktok|snapchat|pinterest)
+- `platform` (meta|google|tiktok|snapchat|linkedin)
 - `account_id`, `account_name`, `top_up_fee_rate` numeric(5,2), `status` (active|paused|closed)
 
 ### `transactions`
@@ -141,7 +141,7 @@ Single-row agency configuration.
 
 6. **Duplicate email prevention** — pre-check with SELECT before INSERT in POST /api/clients (Neon errors don't expose PG error codes reliably)
 
-7. **client_platform_fees** — JSONB `{ meta, google, tiktok, snapchat, pinterest }` storing % top-up fee rates per platform for each client
+7. **client_platform_fees** — JSONB `{ meta, google, tiktok, snapchat, linkedin }` storing % top-up fee rates per platform for each client
 
 8. **Setup rental** — `has_setup=true` clients have monthly fee + cost tracked; reflected in P&L (Sprint 8)
 

@@ -11,7 +11,7 @@ interface Props {
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 export function SetFeeModal({ supplierId, platform, currentRate }: Props) {

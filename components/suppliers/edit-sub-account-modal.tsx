@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Pencil } from "lucide-react";
 
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 type PlatformKey = typeof PLATFORMS[number];
@@ -44,7 +44,7 @@ export function EditSubAccountModal({ supplierId, subAccountId, currentName, cur
     google: getFeeValue("google"),
     tiktok: getFeeValue("tiktok"),
     snapchat: getFeeValue("snapchat"),
-    pinterest: getFeeValue("pinterest"),
+    linkedin: getFeeValue("linkedin"),
   });
 
   async function handleSubmit(e: React.FormEvent) {

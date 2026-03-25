@@ -57,7 +57,7 @@ export const clients = pgTable("clients", {
   has_setup: boolean("has_setup").notNull().default(false),
   setup_monthly_fee: numeric("setup_monthly_fee", { precision: 10, scale: 2 }),
   setup_monthly_cost: numeric("setup_monthly_cost", { precision: 10, scale: 2 }),
-  client_platform_fees: jsonb("client_platform_fees").$type<{ meta: number; google: number; tiktok: number; snapchat: number; pinterest: number } | null>(),
+  client_platform_fees: jsonb("client_platform_fees").$type<{ meta: number; google: number; tiktok: number; snapchat: number; linkedin: number } | null>(),
   created_at: timestamp("created_at").notNull().default(now()),
 });
 
@@ -91,7 +91,7 @@ export const supplier_platform_fees = pgTable(
     supplier_sub_account_id: uuid("supplier_sub_account_id")
       .notNull()
       .references(() => supplier_sub_accounts.id, { onDelete: "cascade" }),
-    platform: text("platform").notNull(), // meta|google|tiktok|snapchat|pinterest
+    platform: text("platform").notNull(), // meta|google|tiktok|snapchat|linkedin
     fee_rate: numeric("fee_rate", { precision: 5, scale: 2 }).notNull(),
   },
   (t) => ({
@@ -110,7 +110,7 @@ export const ad_accounts = pgTable("ad_accounts", {
     .references(() => suppliers.id, { onDelete: "restrict" }),
   supplier_sub_account_id: uuid("supplier_sub_account_id")
     .references(() => supplier_sub_accounts.id, { onDelete: "set null" }),
-  platform: text("platform").notNull(), // meta|google|tiktok|snapchat|pinterest
+  platform: text("platform").notNull(), // meta|google|tiktok|snapchat|linkedin
   account_id: text("account_id").notNull(),
   account_name: text("account_name").notNull(),
   top_up_fee_rate: numeric("top_up_fee_rate", { precision: 5, scale: 2 }).notNull(),

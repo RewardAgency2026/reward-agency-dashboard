@@ -35,7 +35,7 @@ interface Props {
 const CURRENCIES = ["USD", "EUR", "USDT", "USDC"] as const;
 
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 const STATUS_LABELS: Record<string, string> = {

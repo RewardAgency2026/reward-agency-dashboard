@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const patchSchema = z.object({
-  platform: z.enum(["meta", "google", "tiktok", "snapchat", "pinterest"]).optional(),
+  platform: z.enum(["meta", "google", "tiktok", "snapchat", "linkedin"]).optional(),
   account_id: z.string().min(1).optional(),
   account_name: z.string().min(1).optional(),
   supplier_sub_account_id: z.string().uuid().optional(),

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type PlatformFees = { meta?: number; google?: number; tiktok?: number; snapchat?: number; pinterest?: number };
+type PlatformFees = { meta?: number; google?: number; tiktok?: number; snapchat?: number; linkedin?: number };
 
 interface SubAccountOption {
   id: string;
@@ -34,9 +34,9 @@ interface Props {
   label?: string;
 }
 
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
 const PLATFORM_LABELS: Record<string, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";

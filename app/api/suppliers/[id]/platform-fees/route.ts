@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const feeSchema = z.object({
   supplier_sub_account_id: z.string().uuid("supplier_sub_account_id must be a valid UUID"),
-  platform: z.enum(["meta", "google", "tiktok", "snapchat", "pinterest"]),
+  platform: z.enum(["meta", "google", "tiktok", "snapchat", "linkedin"]),
   fee_rate: z.number().min(0).max(100),
 });
 

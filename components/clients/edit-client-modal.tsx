@@ -10,10 +10,10 @@ interface Affiliate {
   affiliate_code: string;
 }
 
-type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; pinterest: number };
-const PLATFORMS: (keyof PlatformFees)[] = ["meta", "google", "tiktok", "snapchat", "pinterest"];
+type PlatformFees = { meta: number; google: number; tiktok: number; snapchat: number; linkedin: number };
+const PLATFORMS: (keyof PlatformFees)[] = ["meta", "google", "tiktok", "snapchat", "linkedin"];
 const PLATFORM_LABELS: Record<keyof PlatformFees, string> = {
-  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", pinterest: "Pinterest",
+  meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
 };
 
 interface Client {
@@ -46,7 +46,7 @@ function buildFormState(client: Client) {
 }
 
 function buildPlatformFees(client: Client): PlatformFees {
-  return client.client_platform_fees ?? { meta: 0, google: 0, tiktok: 0, snapchat: 0, pinterest: 0 };
+  return client.client_platform_fees ?? { meta: 0, google: 0, tiktok: 0, snapchat: 0, linkedin: 0 };
 }
 
 export function EditClientModal({ client, affiliates }: Props) {

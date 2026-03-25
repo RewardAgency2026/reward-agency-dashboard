@@ -5,14 +5,14 @@ import { supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
-const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "pinterest"] as const;
+const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
 
 const platformFeesSchema = z.object({
   meta: z.number().min(0).max(100).optional(),
   google: z.number().min(0).max(100).optional(),
   tiktok: z.number().min(0).max(100).optional(),
   snapchat: z.number().min(0).max(100).optional(),
-  pinterest: z.number().min(0).max(100).optional(),
+  linkedin: z.number().min(0).max(100).optional(),
 }).optional();
 
 const patchSchema = z.object({

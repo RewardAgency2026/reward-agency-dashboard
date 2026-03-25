@@ -283,7 +283,7 @@ describe("POST /api/clients — new fields (notes, setup, platform fees)", () =>
       has_setup: true,
       setup_monthly_fee: 500,
       setup_monthly_cost: 200,
-      client_platform_fees: { meta: 2, google: 1.5, tiktok: 0, snapchat: 0, pinterest: 0 },
+      client_platform_fees: { meta: 2, google: 1.5, tiktok: 0, snapchat: 0, linkedin: 0 },
     });
     assert.equal(status, 201, `Expected 201, got ${status}: ${JSON.stringify(data)}`);
     assert.equal(data.notes, "Internal test notes");

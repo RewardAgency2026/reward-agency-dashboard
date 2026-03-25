@@ -8,7 +8,7 @@ import { z } from "zod";
 const createSchema = z.object({
   client_id: z.string().uuid("Invalid client ID"),
   supplier_sub_account_id: z.string().uuid("Invalid supplier sub-account ID"),
-  platform: z.enum(["meta", "google", "tiktok", "snapchat", "pinterest"]),
+  platform: z.enum(["meta", "google", "tiktok", "snapchat", "linkedin"]),
   account_id: z.string().min(1, "Account ID is required"),
   account_name: z.string().min(1, "Account name is required"),
 });
