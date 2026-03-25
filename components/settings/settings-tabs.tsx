@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuditLogTable } from "@/components/audit-log/audit-log-table";
 
@@ -205,6 +206,7 @@ function TeamTab() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"admin" | "team" | "accountant">("team");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -220,7 +222,13 @@ function TeamTab() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create user");
+        if (data.details?.length > 0) {
+          setError(data.details[0].message);
+        } else if (data.error === "Email already exists") {
+          setError("This email is already in use");
+        } else {
+          setError(data.error ?? "Failed to create user");
+        }
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["agency-users"] });
@@ -228,6 +236,7 @@ function TeamTab() {
       setName("");
       setEmail("");
       setPassword("");
+      setShowPassword(false);
       setRole("team");
     } finally {
       setSubmitting(false);
@@ -274,12 +283,23 @@ function TeamTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Minimum 8 characters</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -296,7 +316,7 @@ function TeamTab() {
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
             <button
-              onClick={() => { setShowModal(false); setError(""); }}
+              onClick={() => { setShowModal(false); setError(""); setShowPassword(false); }}
               className="rounded-lg px-4 py-2 text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
             >
               Cancel
