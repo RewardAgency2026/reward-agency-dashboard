@@ -13,6 +13,10 @@ interface ClientOption {
   wallet_balance: number;
   billing_currency: string;
   client_platform_fees: Record<string, number> | null;
+  affiliate_id: string | null;
+  affiliate_name: string | null;
+  affiliate_code: string | null;
+  commission_rate?: string | null;
 }
 
 interface AdAccountOption {
@@ -161,6 +165,12 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
                         </option>
                       ))}
                     </select>
+                    {selectedClient?.affiliate_name && (
+                      <p className="mt-1.5 text-xs text-purple-700 bg-purple-50 border border-purple-100 rounded-md px-3 py-1.5">
+                        🤝 Referred by: <strong>{selectedClient.affiliate_name}</strong> ({selectedClient.affiliate_code})
+                        {selectedClient.commission_rate ? ` — ${selectedClient.commission_rate}% commission on gross margin` : ""}
+                      </p>
+                    )}
                   </div>
                 )}
 

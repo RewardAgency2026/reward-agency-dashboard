@@ -67,6 +67,8 @@ export async function GET(req: NextRequest) {
       crypto_fee_rate: clients.crypto_fee_rate,
       affiliate_id: clients.affiliate_id,
       affiliate_name: affiliates.name,
+      affiliate_code: affiliates.affiliate_code,
+      affiliate_commission_rate: affiliates.commission_rate,
       has_setup: clients.has_setup,
       client_platform_fees: clients.client_platform_fees,
       created_at: clients.created_at,

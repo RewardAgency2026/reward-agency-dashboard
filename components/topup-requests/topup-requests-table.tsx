@@ -27,6 +27,7 @@ export interface TopupRequestRow {
   supplier_name: string | null;
   sub_account_name: string | null;
   supplier_fee_rate: string | null;
+  affiliate_name: string | null;
   wallet_balance: number;
 }
 
@@ -239,6 +240,9 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                 {!hideClientColumn && (
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Client</th>
                 )}
+                {!hideClientColumn && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Affiliate</th>
+                )}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Ad Account</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Supplier</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</th>
@@ -258,6 +262,11 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{r.client_name}</p>
                         <p className="text-xs font-mono text-gray-400">{r.client_code}</p>
+                      </td>
+                    )}
+                    {!hideClientColumn && (
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {r.affiliate_name ?? <span className="text-gray-400">—</span>}
                       </td>
                     )}
                     <td className="px-4 py-3">

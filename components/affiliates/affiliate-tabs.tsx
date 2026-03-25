@@ -28,11 +28,8 @@ interface CommissionRow {
   period_year: number;
   period_month: number;
   clients_count: number;
-  total_topups: string;
   total_commissions_gross: string;
   total_supplier_fees: string;
-  total_crypto_fees: string;
-  total_bank_fees: string;
   total_profit_net: string;
   commission_rate: string;
   commission_amount: string;
@@ -275,14 +272,10 @@ export function AffiliateTabs({ affiliateId }: Props) {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Period</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Clients</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Total Top Ups</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Client Commissions</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Client Commissions Earned</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Provider Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Crypto Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Bank Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Profit Final</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Gross Margin</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Commission Rate</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Commission Due</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                     <th className="px-4 py-3" />
@@ -292,12 +285,8 @@ export function AffiliateTabs({ affiliateId }: Props) {
                   {commissions.map((c) => (
                     <tr key={c.id} className="hover:bg-gray-50/50">
                       <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{MONTH_NAMES[c.period_month - 1]} {c.period_year}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">{c.clients_count}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">${fmt(c.total_topups)}</td>
                       <td className="px-4 py-3 text-right font-mono text-gray-700">${fmt(c.total_commissions_gross)}</td>
                       <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_supplier_fees)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_crypto_fees)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_bank_fees)}</td>
                       <td className="px-4 py-3 text-right font-mono font-medium text-gray-900">${fmt(c.total_profit_net)}</td>
                       <td className="px-4 py-3 text-right font-mono text-gray-600">{fmt(c.commission_rate)}%</td>
                       <td className="px-4 py-3 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">${fmt(c.commission_amount)}</td>

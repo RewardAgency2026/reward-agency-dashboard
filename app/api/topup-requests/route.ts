@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees } from "@/db/schema";
+import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees, affiliates } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance, calculateWalletBalances, balanceFromData } from "@/lib/balance";
@@ -40,9 +40,11 @@ export async function GET(req: NextRequest) {
       supplier_name: suppliers.name,
       sub_account_name: supplier_sub_accounts.name,
       supplier_fee_rate: supplier_platform_fees.fee_rate,
+      affiliate_name: affiliates.name,
     })
     .from(topup_requests)
     .leftJoin(clients, eq(topup_requests.client_id, clients.id))
+    .leftJoin(affiliates, eq(clients.affiliate_id, affiliates.id))
     .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
     .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
     .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))

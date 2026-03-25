@@ -192,21 +192,17 @@ describe("POST /api/affiliates/[id]/commissions/calculate", () => {
     assert.ok(data.id, "should return commission record");
     assert.equal(data.period_year, 2026);
     assert.equal(data.period_month, 1);
-    // New formula fields
+    // Simplified formula fields
     assert.ok("total_commissions_gross" in data, "should have total_commissions_gross");
     assert.ok("total_supplier_fees" in data, "should have total_supplier_fees");
-    assert.ok("total_crypto_fees" in data, "should have total_crypto_fees");
-    assert.ok("total_bank_fees" in data, "should have total_bank_fees");
     assert.ok("total_profit_net" in data, "should have total_profit_net");
     assert.ok("commission_amount" in data, "should have commission_amount");
-    // Verify formula: profit_net = gross - supplier_fees - crypto_fees - bank_fees
+    // Verify formula: gross_margin = commissions_gross - supplier_fees
     const gross = parseFloat(data.total_commissions_gross);
     const supFees = parseFloat(data.total_supplier_fees);
-    const cryptoFees = parseFloat(data.total_crypto_fees);
-    const bankFees = parseFloat(data.total_bank_fees);
     const profitNet = parseFloat(data.total_profit_net);
-    assert.ok(Math.abs(profitNet - (gross - supFees - cryptoFees - bankFees)) < 0.01, "profit_net formula should be correct");
-    // commission_amount = profit_net × rate%
+    assert.ok(Math.abs(profitNet - (gross - supFees)) < 0.01, "gross_margin formula should be correct");
+    // commission_amount = gross_margin × rate%
     const rate = parseFloat(data.commission_rate);
     const commissionAmount = parseFloat(data.commission_amount);
     assert.ok(Math.abs(commissionAmount - profitNet * rate / 100) < 0.01, "commission_amount formula should be correct");

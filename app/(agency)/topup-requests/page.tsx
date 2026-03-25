@@ -68,6 +68,8 @@ export default function TopupRequestsPage() {
     id: string; name: string; client_code: string; balance_model: string;
     wallet_balance: number; billing_currency: string; status: string;
     client_platform_fees: Record<string, number> | null;
+    affiliate_id: string | null; affiliate_name: string | null;
+    affiliate_code: string | null; affiliate_commission_rate: string | null;
   }>)
     .filter((c) => c.status === "active")
     .map((c) => ({
@@ -78,6 +80,10 @@ export default function TopupRequestsPage() {
       wallet_balance: c.wallet_balance,
       billing_currency: c.billing_currency,
       client_platform_fees: c.client_platform_fees,
+      affiliate_id: c.affiliate_id,
+      affiliate_name: c.affiliate_name,
+      affiliate_code: c.affiliate_code,
+      commission_rate: c.affiliate_commission_rate,
     }));
 
   const adAccountOptions = (adAccountsRaw as Array<{
