@@ -10,11 +10,11 @@ export function PlatformIcon({ platform, size = 18 }: Props) {
     case "meta":
       return (
         <img
-          src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/800px-Meta_Platforms_Inc._logo.svg.png"
-          width={s}
-          height={s}
+          src="/platforms/meta.png"
+          width={size}
+          height={size}
           alt="Meta"
-          style={{ objectFit: "contain", borderRadius: 4 }}
+          style={{ objectFit: "contain" }}
         />
       );
 

@@ -36,7 +36,8 @@
       "Bash(git restore:*)",
       "Bash(curl:*)",
       "Bash(grep:*)",
-      "Bash(kill 94018)"
+      "Bash(kill 94018)",
+      "Bash(find /Users/simon/Projects/reward-agency-dashboard -name *.png)"
     ]
   }
 }
