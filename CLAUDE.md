@@ -346,3 +346,5 @@ reward-agency-dashboard/
 - **No CSS custom properties** on HTML elements — use Tailwind arbitrary values (`bg-[hsl(...)]`) to avoid unstyled flash on navigation
 - **No `loading.tsx` files** — they cause grey flash during navigation
 - **Always manually check for duplicate headings, buttons, or UI elements after building new pages** — page server components own the header (title + action button); table/tab client components must not repeat them
+- **Never modify `tailwind.config.ts` or `globals.css`** without verifying the sidebar still renders correctly (dark navy `hsl(222,47%,11%)` background). CSS breakage is caused by stale `.next` cache — fix with `rm -rf .next && npm run dev`
+- **CSS breaks after cache goes stale** — if sidebar shows as unstyled text, run `pkill -f "next dev" && rm -rf .next && npm run dev`. The Tailwind config and sidebar component are correct; the issue is always a stale webpack cache

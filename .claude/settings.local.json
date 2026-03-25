@@ -38,7 +38,9 @@
       "Bash(grep:*)",
       "Bash(kill 94018)",
       "Bash(find /Users/simon/Projects/reward-agency-dashboard -name *.png)",
-      "Bash(/dev/null grep:*)"
+      "Bash(/dev/null grep:*)",
+      "Bash(head:*)",
+      "Bash(find /Users/simon/Projects/reward-agency-dashboard/.next/static/css -name *.css)"
     ]
   }
 }
