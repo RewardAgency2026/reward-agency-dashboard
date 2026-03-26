@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { ClientTopNav } from "@/components/client-topnav";
+import { ClientSidebar } from "@/components/client-sidebar";
+import { Providers } from "@/components/providers";
 
 export default async function ClientLayout({
   children,
@@ -22,12 +23,14 @@ export default async function ClientLayout({
     .limit(1);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ClientTopNav
-        userName={session.user.name ?? ""}
-        clientCode={clientData?.client_code ?? ""}
-      />
-      <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
-    </div>
+    <Providers>
+      <div className="flex min-h-screen bg-white">
+        <ClientSidebar
+          userName={session.user.name ?? ""}
+          clientCode={clientData?.client_code ?? ""}
+        />
+        <main className="ml-60 flex-1 bg-gray-50 p-8">{children}</main>
+      </div>
+    </Providers>
   );
 }
