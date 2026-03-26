@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditAffiliateModal } from "./edit-affiliate-modal";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 import type { AffiliateRow } from "./affiliates-table";
 
 interface AffiliateDetail extends AffiliateRow {
@@ -38,6 +40,20 @@ interface CommissionRow {
   paid_at: string | null;
 }
 
+interface CommissionDetailRow {
+  id: string;
+  created_at: string;
+  amount: string;
+  top_up_fee_amount: string;
+  supplier_fee_amount: string;
+  currency: string;
+  client_name: string | null;
+  client_code: string | null;
+  ad_account_name: string | null;
+  ad_account_platform: string | null;
+  gross_margin: string;
+}
+
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -66,6 +82,8 @@ export function AffiliateTabs({ affiliateId }: Props) {
   const [activeTab, setActiveTab] = useState<"clients" | "commissions" | "info">("clients");
   const [showEdit, setShowEdit] = useState(false);
   const [finalizingId, setFinalizingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAllDetail, setShowAllDetail] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: affiliate, isLoading: affLoading } = useQuery<AffiliateDetail>({
@@ -84,6 +102,21 @@ export function AffiliateTabs({ affiliateId }: Props) {
     queryFn: () => fetch(`/api/affiliates/${affiliateId}/commissions`).then((r) => r.json()),
     enabled: activeTab === "commissions",
   });
+
+  const { data: detail = [], isLoading: detailLoading } = useQuery<CommissionDetailRow[]>({
+    queryKey: ["commission-detail", expandedId],
+    queryFn: () => fetch(`/api/affiliate-commissions/${expandedId}/detail`).then((r) => r.json()),
+    enabled: expandedId !== null,
+  });
+
+  function toggleExpand(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      setShowAllDetail(false);
+    }
+  }
 
   const finalizeMutation = useMutation({
     mutationFn: (commId: string) =>
@@ -239,6 +272,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-3 py-3 w-8" />
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Period</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Client Commissions Earned</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Provider Fees</th>
@@ -250,63 +284,144 @@ export function AffiliateTabs({ affiliateId }: Props) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {commissions.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50/50">
-                      <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{MONTH_NAMES[c.period_month - 1]} {c.period_year}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-700">${fmt(c.total_commissions_gross)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_supplier_fees)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-medium text-gray-900">${fmt(c.total_profit_net)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">{fmt(c.commission_rate)}%</td>
-                      <td className="px-4 py-3 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">${fmt(c.commission_amount)}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium capitalize", COMM_STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500")}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {c.status === "preview" && (
-                          finalizingId === c.id ? (
-                            <span className="inline-flex items-center gap-1">
-                              <button
-                                onClick={() => finalizeMutation.mutate(c.id)}
-                                disabled={finalizeMutation.isPending}
-                                className="text-xs text-white bg-amber-500 hover:bg-amber-600 px-2 py-1 rounded disabled:opacity-50"
-                              >
-                                Confirm?
-                              </button>
-                              <button
-                                onClick={() => setFinalizingId(null)}
-                                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
-                              >
-                                Cancel
-                              </button>
+                  {commissions.map((c) => {
+                    const isExpanded = expandedId === c.id;
+                    const visibleDetail = showAllDetail ? detail : detail.slice(0, 5);
+                    const hiddenCount = detail.length - 5;
+                    return (
+                      <React.Fragment key={c.id}>
+                        <tr className={cn("hover:bg-gray-50/50 cursor-pointer", isExpanded && "bg-blue-50/30")}>
+                          <td className="px-3 py-3 text-gray-400" onClick={() => toggleExpand(c.id)}>
+                            {isExpanded
+                              ? <ChevronDown size={16} className="text-gray-500" />
+                              : <ChevronRight size={16} />
+                            }
+                          </td>
+                          <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap" onClick={() => toggleExpand(c.id)}>{MONTH_NAMES[c.period_month - 1]} {c.period_year}</td>
+                          <td className="px-4 py-3 text-right font-mono text-gray-700">${fmt(c.total_commissions_gross)}</td>
+                          <td className="px-4 py-3 text-right font-mono text-gray-600">−${fmt(c.total_supplier_fees)}</td>
+                          <td className="px-4 py-3 text-right font-mono font-medium text-gray-900">${fmt(c.total_profit_net)}</td>
+                          <td className="px-4 py-3 text-right font-mono text-gray-600">{fmt(c.commission_rate)}%</td>
+                          <td className="px-4 py-3 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">${fmt(c.commission_amount)}</td>
+                          <td className="px-4 py-3">
+                            <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium capitalize", COMM_STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500")}>
+                              {c.status === "preview" ? "Live Preview" : c.status === "calculated" ? "Finalized" : "Paid"}
                             </span>
-                          ) : (
-                            <button
-                              onClick={() => setFinalizingId(c.id)}
-                              className="text-xs text-amber-600 hover:underline whitespace-nowrap"
-                            >
-                              Finalize
-                            </button>
-                          )
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {c.status === "preview" && (
+                              finalizingId === c.id ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <button
+                                    onClick={() => finalizeMutation.mutate(c.id)}
+                                    disabled={finalizeMutation.isPending}
+                                    className="text-xs text-white bg-amber-500 hover:bg-amber-600 px-2 py-1 rounded disabled:opacity-50"
+                                  >
+                                    Confirm?
+                                  </button>
+                                  <button
+                                    onClick={() => setFinalizingId(null)}
+                                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                                  >
+                                    Cancel
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setFinalizingId(c.id)}
+                                  className="text-xs text-amber-600 hover:underline whitespace-nowrap"
+                                >
+                                  Finalize
+                                </button>
+                              )
+                            )}
+                            {c.status === "calculated" && (
+                              <button
+                                onClick={() => markPaidMutation.mutate(c.id)}
+                                disabled={markPaidMutation.isPending}
+                                className="text-xs text-[hsl(236,85%,55%)] hover:underline disabled:opacity-50 whitespace-nowrap"
+                              >
+                                Mark Paid
+                              </button>
+                            )}
+                            {c.status === "paid" && c.paid_at && (
+                              <span className="text-xs text-gray-400">
+                                Paid {new Date(c.paid_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={9} className="bg-gray-50/60 px-6 py-4 border-t border-gray-100">
+                              {detailLoading ? (
+                                <div className="text-sm text-gray-400 animate-pulse py-2">Loading transactions...</div>
+                              ) : detail.length === 0 ? (
+                                <p className="text-sm text-gray-400 py-2">No top-up transactions found for this period.</p>
+                              ) : (
+                                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                                  <table className="w-full text-xs">
+                                    <thead className="bg-gray-50">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Date</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Client</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Ad Account</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Top Up Amount</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Provider Fee</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Gross Margin</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {visibleDetail.map((row) => (
+                                        <tr key={row.id} className="hover:bg-gray-50/50">
+                                          <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                                            {new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <p className="font-medium text-gray-800">{row.client_name ?? "—"}</p>
+                                            <p className="font-mono text-gray-400">{row.client_code}</p>
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <div className="flex items-center gap-1.5">
+                                              {row.ad_account_platform && <PlatformIcon platform={row.ad_account_platform} size={14} />}
+                                              <span className="text-gray-700">{row.ad_account_name ?? "—"}</span>
+                                            </div>
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono text-gray-700">
+                                            {parseFloat(row.amount).toFixed(2)} {row.currency}
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono text-gray-700">
+                                            ${parseFloat(row.top_up_fee_amount).toFixed(2)}
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono text-gray-600">
+                                            −${parseFloat(row.supplier_fee_amount).toFixed(2)}
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono font-medium text-gray-900">
+                                            ${parseFloat(row.gross_margin).toFixed(2)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                  {!showAllDetail && hiddenCount > 0 && (
+                                    <div className="px-3 py-2 border-t border-gray-100 bg-gray-50/50">
+                                      <button
+                                        onClick={() => setShowAllDetail(true)}
+                                        className="text-xs text-[hsl(236,85%,55%)] hover:underline"
+                                      >
+                                        See {hiddenCount} more
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
                         )}
-                        {c.status === "calculated" && (
-                          <button
-                            onClick={() => markPaidMutation.mutate(c.id)}
-                            disabled={markPaidMutation.isPending}
-                            className="text-xs text-[hsl(236,85%,55%)] hover:underline disabled:opacity-50 whitespace-nowrap"
-                          >
-                            Mark Paid
-                          </button>
-                        )}
-                        {c.status === "paid" && c.paid_at && (
-                          <span className="text-xs text-gray-400">
-                            Paid {new Date(c.paid_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
