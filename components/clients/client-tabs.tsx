@@ -87,6 +87,7 @@ interface Props {
   affiliates: Affiliate[];
   suppliers: SupplierOption[];
   canCredit: boolean;
+  isAdmin: boolean;
   topupRequests: TopupRequestRow[];
   adAccountOptions: AdAccountOption[];
 }
@@ -147,11 +148,108 @@ function formatAmount(txn: Transaction) {
   return `${isDebit ? "−" : "+"}${val.toFixed(2)}`;
 }
 
-export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequests }: Props) {
+export function ClientTabs({ client, affiliates, suppliers, canCredit, isAdmin, topupRequests }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]>("Overview");
+  const [showResetPwd, setShowResetPwd] = useState(false);
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwdConfirm, setResetPwdConfirm] = useState("");
+  const [resetPwdError, setResetPwdError] = useState("");
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
+  const [resetPwdDone, setResetPwdDone] = useState(false);
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetPwdError("");
+    if (resetPwd.length < 8) { setResetPwdError("Password must be at least 8 characters."); return; }
+    if (resetPwd !== resetPwdConfirm) { setResetPwdError("Passwords do not match."); return; }
+    setResetPwdLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${client.id}/reset-password`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: resetPwd }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setResetPwdError(data.error ?? "Failed"); return; }
+      setResetPwdDone(true);
+      setTimeout(() => { setShowResetPwd(false); setResetPwd(""); setResetPwdConfirm(""); setResetPwdDone(false); }, 1500);
+    } finally {
+      setResetPwdLoading(false);
+    }
+  }
 
   return (
     <div>
+      {/* Reset Password Modal */}
+      {showResetPwd && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl border border-gray-200 mx-4">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Reset Client Password</h3>
+              <p className="text-xs text-gray-500 mt-0.5">{client.name} — {client.email}</p>
+            </div>
+            {resetPwdDone ? (
+              <div className="px-6 py-8 text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 mb-2">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-gray-900">Password reset successfully</p>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword}>
+                <div className="px-6 py-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">New Password</label>
+                    <input
+                      type="password"
+                      value={resetPwd}
+                      onChange={(e) => setResetPwd(e.target.value)}
+                      required
+                      minLength={8}
+                      placeholder="Min. 8 characters"
+                      autoFocus
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={resetPwdConfirm}
+                      onChange={(e) => setResetPwdConfirm(e.target.value)}
+                      required
+                      placeholder="Repeat password"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)] focus:border-transparent"
+                    />
+                  </div>
+                  {resetPwdError && (
+                    <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">{resetPwdError}</p>
+                  )}
+                </div>
+                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowResetPwd(false); setResetPwd(""); setResetPwdConfirm(""); setResetPwdError(""); }}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetPwdLoading}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium bg-[hsl(236,85%,55%)] text-white hover:bg-[hsl(236,85%,50%)] disabled:opacity-50"
+                  >
+                    {resetPwdLoading ? "Saving..." : "Reset Password"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Back link */}
       <Link href="/clients" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-4">
         <ArrowLeft size={13} />
@@ -173,6 +271,14 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, topupRequ
           )}
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowResetPwd(true)}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Reset Password
+            </button>
+          )}
           <WithdrawModal clientId={client.id} walletBalance={client.wallet_balance} canWithdraw={canCredit} />
           <CreditModal clientId={client.id} cryptoFeeRate={parseFloat(client.crypto_fee_rate)} canCredit={canCredit} />
           <EditClientModal client={{ ...client, client_platform_fees: client.client_platform_fees as PlatformFees | null }} affiliates={affiliates} />

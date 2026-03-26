@@ -237,6 +237,16 @@ export const audit_logs = pgTable("audit_logs", {
   created_at: timestamp("created_at").notNull().default(now()),
 });
 
+// ─── password_reset_tokens ────────────────────────────────────────────────────
+export const password_reset_tokens = pgTable("password_reset_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  token: text("token").notNull().unique(),
+  expires_at: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  created_at: timestamp("created_at").notNull().default(now()),
+});
+
 // ─── settings ─────────────────────────────────────────────────────────────────
 export const settings = pgTable("settings", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

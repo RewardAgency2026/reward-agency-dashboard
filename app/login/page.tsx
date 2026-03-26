@@ -13,6 +13,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Forgot password modal state
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotDone, setForgotDone] = useState(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -50,8 +56,87 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      setForgotDone(true);
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
+  function closeForgot() {
+    setShowForgot(false);
+    setForgotEmail("");
+    setForgotDone(false);
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      {/* Forgot password modal */}
+      {showForgot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl border border-gray-200 mx-4">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Reset your password</h3>
+            </div>
+
+            {forgotDone ? (
+              <div className="px-6 py-8 text-center space-y-2">
+                <p className="text-sm text-gray-700">
+                  If this email is registered, you will receive a reset link shortly.
+                </p>
+                <button
+                  onClick={closeForgot}
+                  className="mt-4 text-sm text-blue-600 hover:underline"
+                >
+                  Back to login
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit}>
+                <div className="px-6 py-4 space-y-3">
+                  <p className="text-sm text-gray-500">
+                    Enter your email and we'll send you a reset link.
+                  </p>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoFocus
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={closeForgot}
+                    className="rounded-lg px-4 py-2 text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="rounded-lg px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {forgotLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md">
         <div className="bg-white shadow-md rounded-lg px-8 py-10">
           <div className="mb-8 text-center">
@@ -99,6 +184,15 @@ export default function LoginPage() {
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div className="mt-1.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Forgot password?
                 </button>
               </div>
             </div>

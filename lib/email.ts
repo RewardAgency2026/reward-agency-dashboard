@@ -212,6 +212,41 @@ export async function sendAffiliateOnboardingWelcome(params: {
   }
 }
 
+// ─── sendPasswordReset ────────────────────────────────────────────────────────
+
+export async function sendPasswordReset(params: {
+  to: string;
+  resetUrl: string;
+}): Promise<EmailResult> {
+  if (!resend) {
+    console.log("[email] sendPasswordReset →", params.to, { resetUrl: params.resetUrl });
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Reset your password</h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Click the button below to reset your Reward Agency password. This link expires in <strong style="color:#111827;">1 hour</strong>.</p>
+
+    ${ctaButton("Reset Password", params.resetUrl)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">If you did not request a password reset, you can safely ignore this email.</p>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: "Reset your Reward Agency password",
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendPasswordReset failed:", message);
+    return { success: false, error: message };
+  }
+}
+
 // ─── sendClientOnboardingWelcome (alias for sendClientWelcome) ────────────────
 
 export async function sendClientOnboardingWelcome(params: {

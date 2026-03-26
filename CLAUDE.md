@@ -201,6 +201,7 @@ To be added in Sprint 4.
 | Sprint 6 | ✅ Done | Transactions page (filters+CSV), Dashboard (KPIs+charts+recharts), Settings (Agency Info/Team/Audit Log tabs), delete top-up enhanced UX, new audit actions |
 | Sprint 7 | ✅ Done | Affiliates CRUD, hybrid commission system (auto-preview on execute, finalize flow), mark-paid, public onboarding page, client login, email notifications (Resend + console fallback), 14 tests |
 | Sprint 8 | ✅ Done | Client portal (dashboard, accounts, transactions, top-ups, 5 secure API routes, 20 tests) |
+| Forgot/Reset Password | ✅ Done | Forgot password flow (email link), reset page, admin client reset, password_reset_tokens table |
 | Sprint 9 | 🔄 Next | P&L + Invoices |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |

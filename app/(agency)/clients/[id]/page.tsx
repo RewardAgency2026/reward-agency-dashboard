@@ -24,6 +24,7 @@ export default function ClientDetailPage() {
   const id = params.id;
   const { data: session } = useSession();
   const canCredit = ["admin", "team"].includes(session?.user.role ?? "");
+  const isAdmin = session?.user.role === "admin";
 
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: ["clients", id],
@@ -106,6 +107,7 @@ export default function ClientDetailPage() {
       affiliates={affiliates}
       suppliers={suppliers}
       canCredit={canCredit}
+      isAdmin={isAdmin}
       topupRequests={topupRequests}
       adAccountOptions={adAccountOptions}
     />
