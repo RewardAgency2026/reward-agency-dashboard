@@ -56,11 +56,17 @@ export async function GET(
     )
     .orderBy(transactions.created_at);
 
+  const commRate = parseFloat(commission.commission_rate) / 100;
+
   return NextResponse.json(
-    rows.map((r) => ({
-      ...r,
-      created_at: r.created_at.toISOString(),
-      gross_margin: (parseFloat(r.top_up_fee_amount) - parseFloat(r.supplier_fee_amount)).toFixed(2),
-    }))
+    rows.map((r) => {
+      const grossMargin = parseFloat(r.top_up_fee_amount) - parseFloat(r.supplier_fee_amount);
+      return {
+        ...r,
+        created_at: r.created_at.toISOString(),
+        gross_margin: grossMargin.toFixed(2),
+        commission_due: (grossMargin * commRate).toFixed(2),
+      };
+    })
   );
 }

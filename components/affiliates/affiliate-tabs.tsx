@@ -52,6 +52,7 @@ interface CommissionDetailRow {
   ad_account_name: string | null;
   ad_account_platform: string | null;
   gross_margin: string;
+  commission_due: string;
 }
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -370,6 +371,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Provider Fee</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Gross Margin</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission Due</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -399,6 +401,9 @@ export function AffiliateTabs({ affiliateId }: Props) {
                                           </td>
                                           <td className="px-3 py-2 text-right font-mono font-medium text-gray-900">
                                             ${parseFloat(row.gross_margin).toFixed(2)}
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">
+                                            ${parseFloat(row.commission_due).toFixed(2)}
                                           </td>
                                         </tr>
                                       ))}
