@@ -48,7 +48,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 const COMM_STATUS_BADGE: Record<string, string> = {
-  calculated: "bg-blue-50 text-blue-700 border border-blue-200",
+  preview: "bg-blue-50 text-blue-700 border border-blue-200",
+  calculated: "bg-amber-50 text-amber-700 border border-amber-200",
   paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
@@ -64,9 +65,7 @@ interface Props {
 export function AffiliateTabs({ affiliateId }: Props) {
   const [activeTab, setActiveTab] = useState<"clients" | "commissions" | "info">("clients");
   const [showEdit, setShowEdit] = useState(false);
-  const [calcYear, setCalcYear] = useState(new Date().getFullYear());
-  const [calcMonth, setCalcMonth] = useState(new Date().getMonth() + 1);
-  const [calcError, setCalcError] = useState("");
+  const [finalizingId, setFinalizingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: affiliate, isLoading: affLoading } = useQuery<AffiliateDetail>({
@@ -86,13 +85,9 @@ export function AffiliateTabs({ affiliateId }: Props) {
     enabled: activeTab === "commissions",
   });
 
-  const calcMutation = useMutation({
-    mutationFn: () =>
-      fetch(`/api/affiliates/${affiliateId}/commissions/calculate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ year: calcYear, month: calcMonth }),
-      }).then(async (r) => {
+  const finalizeMutation = useMutation({
+    mutationFn: (commId: string) =>
+      fetch(`/api/affiliate-commissions/${commId}/finalize`, { method: "PATCH" }).then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error ?? "Failed");
         return data;
@@ -100,9 +95,8 @@ export function AffiliateTabs({ affiliateId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["affiliate-commissions", affiliateId] });
       queryClient.invalidateQueries({ queryKey: ["affiliate", affiliateId] });
-      setCalcError("");
+      setFinalizingId(null);
     },
-    onError: (e: Error) => setCalcError(e.message),
   });
 
   const markPaidMutation = useMutation({
@@ -228,37 +222,11 @@ export function AffiliateTabs({ affiliateId }: Props) {
 
       {activeTab === "commissions" && (
         <div className="space-y-4">
-          {/* Calculate form */}
+          {/* Info text */}
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-sm font-medium text-gray-700 mb-3">Calculate Commission</p>
-            <div className="flex items-center gap-3">
-              <select
-                value={calcMonth}
-                onChange={(e) => setCalcMonth(Number(e.target.value))}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]"
-              >
-                {MONTH_NAMES.map((m, i) => (
-                  <option key={i} value={i + 1}>{m}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                value={calcYear}
-                onChange={(e) => setCalcYear(Number(e.target.value))}
-                min={2020}
-                max={2100}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]"
-              />
-              <button
-                onClick={() => calcMutation.mutate()}
-                disabled={calcMutation.isPending}
-                className="rounded-lg bg-[hsl(236,85%,55%)] px-4 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] disabled:opacity-50"
-              >
-                {calcMutation.isPending ? "Calculating..." : "Calculate"}
-              </button>
-              {calcError && <p className="text-sm text-red-600">{calcError}</p>}
-              {calcMutation.isSuccess && <p className="text-sm text-emerald-600">Calculated!</p>}
-            </div>
+            <p className="text-sm text-gray-500">
+              Commissions update automatically with each top up. Finalize at end of month to freeze the record before paying.
+            </p>
           </div>
 
           {/* Commissions table */}
@@ -295,7 +263,33 @@ export function AffiliateTabs({ affiliateId }: Props) {
                           {c.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {c.status === "preview" && (
+                          finalizingId === c.id ? (
+                            <span className="inline-flex items-center gap-1">
+                              <button
+                                onClick={() => finalizeMutation.mutate(c.id)}
+                                disabled={finalizeMutation.isPending}
+                                className="text-xs text-white bg-amber-500 hover:bg-amber-600 px-2 py-1 rounded disabled:opacity-50"
+                              >
+                                Confirm?
+                              </button>
+                              <button
+                                onClick={() => setFinalizingId(null)}
+                                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                              >
+                                Cancel
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setFinalizingId(c.id)}
+                              className="text-xs text-amber-600 hover:underline whitespace-nowrap"
+                            >
+                              Finalize
+                            </button>
+                          )
+                        )}
                         {c.status === "calculated" && (
                           <button
                             onClick={() => markPaidMutation.mutate(c.id)}
@@ -304,6 +298,11 @@ export function AffiliateTabs({ affiliateId }: Props) {
                           >
                             Mark Paid
                           </button>
+                        )}
+                        {c.status === "paid" && c.paid_at && (
+                          <span className="text-xs text-gray-400">
+                            Paid {new Date(c.paid_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          </span>
                         )}
                       </td>
                     </tr>

@@ -19,14 +19,13 @@ export async function PATCH(
     .limit(1);
 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (existing.status === "preview") {
-    return NextResponse.json({ error: "Finalize the record before marking as paid" }, { status: 400 });
+  if (existing.status !== "preview") {
+    return NextResponse.json({ error: "Can only finalize preview records" }, { status: 400 });
   }
-  if (existing.status === "paid") return NextResponse.json({ error: "Already marked as paid" }, { status: 400 });
 
   const [updated] = await db
     .update(affiliate_commissions)
-    .set({ status: "paid", paid_at: new Date() })
+    .set({ status: "calculated", calculated_at: new Date() })
     .where(eq(affiliate_commissions.id, params.id))
     .returning();
 

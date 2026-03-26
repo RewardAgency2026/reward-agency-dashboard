@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { topup_requests, clients, ad_accounts, supplier_platform_fees, transactions } from "@/db/schema";
+import { topup_requests, clients, ad_accounts, supplier_platform_fees, transactions, affiliates, affiliate_commissions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
@@ -43,7 +43,7 @@ export async function POST(
 
   // Fetch client for balance model + platform fees (source of truth for commission rate)
   const [client] = await db
-    .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees })
+    .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees, affiliate_id: clients.affiliate_id })
     .from(clients)
     .where(eq(clients.id, request.client_id))
     .limit(1);
@@ -139,6 +139,81 @@ export async function POST(
       })
       .returning();
     commissionTxn = row;
+  }
+
+  // After commission transaction: auto-update affiliate commission preview record
+  if (client.affiliate_id) {
+    const affiliateId = client.affiliate_id;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    const [affiliate] = await db
+      .select({ commission_rate: affiliates.commission_rate })
+      .from(affiliates)
+      .where(eq(affiliates.id, affiliateId))
+      .limit(1);
+
+    if (affiliate) {
+      const commRate = parseFloat(affiliate.commission_rate);
+
+      // Count total clients referred by this affiliate
+      const affiliateClients = await db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(eq(clients.affiliate_id, affiliateId));
+      const clientsCount = affiliateClients.length;
+
+      // Look for existing 'preview' record this month
+      const [existingPreview] = await db
+        .select()
+        .from(affiliate_commissions)
+        .where(
+          and(
+            eq(affiliate_commissions.affiliate_id, affiliateId),
+            eq(affiliate_commissions.period_year, currentYear),
+            eq(affiliate_commissions.period_month, currentMonth),
+            eq(affiliate_commissions.status, "preview")
+          )
+        )
+        .limit(1);
+
+      if (existingPreview) {
+        const newGross = parseFloat(existingPreview.total_commissions_gross) + top_up_fee_amount;
+        const newSupFees = parseFloat(existingPreview.total_supplier_fees) + supplier_fee_amount;
+        const newProfitNet = newGross - newSupFees;
+        const newCommAmount = newProfitNet * (commRate / 100);
+        await db
+          .update(affiliate_commissions)
+          .set({
+            total_commissions_gross: String(newGross),
+            total_supplier_fees: String(newSupFees),
+            total_profit_net: String(newProfitNet),
+            commission_amount: String(newCommAmount),
+            clients_count: clientsCount,
+          })
+          .where(eq(affiliate_commissions.id, existingPreview.id));
+      } else {
+        // Create new preview (never modify 'calculated' or 'paid' records)
+        const profitNet = top_up_fee_amount - supplier_fee_amount;
+        const commAmount = profitNet * (commRate / 100);
+        await db.insert(affiliate_commissions).values({
+          affiliate_id: affiliateId,
+          period_year: currentYear,
+          period_month: currentMonth,
+          clients_count: clientsCount,
+          total_topups: "0",
+          total_commissions_gross: String(top_up_fee_amount),
+          total_supplier_fees: String(supplier_fee_amount),
+          total_crypto_fees: "0",
+          total_bank_fees: "0",
+          total_profit_net: String(profitNet),
+          commission_rate: String(commRate),
+          commission_amount: String(commAmount),
+          status: "preview",
+        });
+      }
+    }
   }
 
   // Update topup request status

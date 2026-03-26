@@ -111,8 +111,8 @@ Payments made to suppliers.
 Monthly commission records per affiliate.
 - `id` uuid PK, `affiliate_id`, `period_year`, `period_month`
 - `clients_count`, `total_topups`, `total_commissions_gross`, `total_supplier_fees`, `total_profit_net`
-- `commission_rate`, `commission_amount`, `status` (calculated|paid), `pdf_url`
-- Unique constraint on (affiliate_id, period_year, period_month)
+- `commission_rate`, `commission_amount`, `status` (preview|calculated|paid), `pdf_url`
+- Unique constraint on (affiliate_id, period_year, period_month, status) — allows one preview + one calculated per period
 
 ### `settings`
 Single-row agency configuration.
@@ -147,6 +147,13 @@ Single-row agency configuration.
 7. **client_platform_fees** — JSONB `{ meta, google, tiktok, snapchat, linkedin }` storing % top-up fee rates per platform for each client
 
 8. **Setup rental** — `has_setup=true` clients have monthly fee + cost tracked; reflected in P&L (Sprint 8)
+
+9. **Hybrid affiliate commission flow** — commission records follow the lifecycle: `preview` → `calculated` → `paid`
+   - Each top-up execution auto-creates or increments the current month's `preview` record for the client's affiliate
+   - Only `preview` records are modified by top-up execution; `calculated` and `paid` records are immutable
+   - Admin explicitly finalizes a `preview` record (PATCH `/api/affiliate-commissions/[id]/finalize`) to freeze it as `calculated`
+   - After finalize, new top-ups for the same month create a fresh `preview` record
+   - `calculated` records can be marked as `paid` (PATCH `/api/affiliate-commissions/[id]/mark-paid`); `preview` records cannot
 
 ---
 
@@ -192,7 +199,7 @@ To be added in Sprint 4.
 | Sprint 5 | ✅ Done | Top Ups module (create, execute, reject, fee breakdown preview, platform icons, modal latency fixes, sidebar badge counter, 16 tests) |
 | Fee model | ✅ Done | top_up_fee_rate auto-derived from client_platform_fees; supplier_fee_rate from sub-supplier; both read-only on ad account |
 | Sprint 6 | ✅ Done | Transactions page (filters+CSV), Dashboard (KPIs+charts+recharts), Settings (Agency Info/Team/Audit Log tabs), delete top-up enhanced UX, new audit actions |
-| Sprint 7 | ✅ Done | Affiliates CRUD, commission calculation, mark-paid, public onboarding page, client login, email notifications (Resend + console fallback), 13 tests |
+| Sprint 7 | ✅ Done | Affiliates CRUD, hybrid commission system (auto-preview on execute, finalize flow), mark-paid, public onboarding page, client login, email notifications (Resend + console fallback), 14 tests |
 | Sprint 8 | 🔄 Next | P&L + Invoices |
 | Sprint 9 | ⏳ | Client portal (balance, ad accounts, transactions, top-up requests) |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |

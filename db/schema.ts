@@ -212,16 +212,17 @@ export const affiliate_commissions = pgTable(
     total_profit_net: numeric("total_profit_net", { precision: 12, scale: 2 }).notNull().default("0"),
     commission_rate: numeric("commission_rate", { precision: 5, scale: 2 }).notNull(),
     commission_amount: numeric("commission_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-    status: text("status").notNull().default("calculated"), // calculated|paid
+    status: text("status").notNull().default("preview"), // preview|calculated|paid
     pdf_url: text("pdf_url"),
     calculated_at: timestamp("calculated_at").notNull().default(now()),
     paid_at: timestamp("paid_at"),
   },
   (t) => ({
-    uniq_affiliate_period: unique("uniq_affiliate_period").on(
+    uniq_affiliate_period_preview: unique("uniq_affiliate_period_preview").on(
       t.affiliate_id,
       t.period_year,
-      t.period_month
+      t.period_month,
+      t.status
     ),
   })
 );

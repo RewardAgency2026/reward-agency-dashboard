@@ -36,7 +36,7 @@ export async function GET(
       billing_vat: affiliates.billing_vat,
       status: affiliates.status,
       created_at: affiliates.created_at,
-      clients_count: sql<number>`(SELECT COUNT(*) FROM clients WHERE clients.affiliate_id = ${affiliates.id})`,
+      clients_count: sql<number>`(SELECT COUNT(*) FROM clients WHERE clients.affiliate_id = ${params.id}::uuid)`,
       commissions_paid: sql<string>`COALESCE((SELECT SUM(commission_amount) FROM affiliate_commissions WHERE affiliate_commissions.affiliate_id = ${affiliates.id} AND affiliate_commissions.status = 'paid'), 0)`,
     })
     .from(affiliates)
