@@ -1,3 +1,12 @@
+import { PortalTopups } from "@/components/portal/portal-topups";
+
 export default function ClientTopUpsPage() {
-  return <h1 className="text-2xl font-bold text-gray-900">Top-Ups</h1>;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Top Ups</h1>
+      </div>
+      <PortalTopups />
+    </div>
+  );
 }

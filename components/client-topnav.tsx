@@ -15,9 +15,10 @@ const NAV_ITEMS = [
 
 interface Props {
   userName: string;
+  clientCode: string;
 }
 
-export function ClientTopNav({ userName }: Props) {
+export function ClientTopNav({ userName, clientCode }: Props) {
   const pathname = usePathname();
 
   return (
@@ -54,7 +55,14 @@ export function ClientTopNav({ userName }: Props) {
 
         {/* User + sign out */}
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">{userName}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">{userName}</span>
+            {clientCode && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-500">
+                {clientCode}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700"

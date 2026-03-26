@@ -44,7 +44,10 @@
       "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/clients)",
       "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions)",
       "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate)",
-      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliate-commissions/[id]/mark-paid)"
+      "Bash(mkdir -p /Users/simon/Projects/reward-agency-dashboard/app/api/affiliate-commissions/[id]/mark-paid)",
+      "Bash(rm \"/Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate/route.ts\")",
+      "Bash(rmdir \"/Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate\")",
+      "Bash(ls -la /Users/simon/Projects/reward-agency-dashboard/app/\\\\\\(client\\\\\\)/)"
     ]
   }
 }
