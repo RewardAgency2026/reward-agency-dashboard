@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { clients, affiliate_commissions } from "@/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { clients, affiliate_commissions, affiliates, transactions } from "@/db/schema";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
-export async function GET() {
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (session.user.userType !== "affiliate") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -14,6 +18,31 @@ export async function GET() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
+  const { searchParams } = new URL(req.url);
+  const fromParam = searchParams.get("from") ?? todayStr();
+  const toParam = searchParams.get("to") ?? todayStr();
+
+  const fromDate = new Date(fromParam + "T00:00:00.000Z");
+  const toDate = new Date(toParam + "T23:59:59.999Z");
+
+  // Phase 1: affiliate info + client IDs (needed for period queries)
+  const [affiliateRows, affiliateClients] = await Promise.all([
+    db
+      .select({ commission_rate: affiliates.commission_rate, affiliate_code: affiliates.affiliate_code })
+      .from(affiliates)
+      .where(eq(affiliates.id, affiliateId))
+      .limit(1),
+    db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.affiliate_id, affiliateId)),
+  ]);
+
+  const affiliateRow = affiliateRows[0];
+  const clientIds = affiliateClients.map((c) => c.id);
+  const commissionRate = parseFloat(affiliateRow?.commission_rate ?? "0") / 100;
+
+  // Phase 2: all main queries in parallel
   const [
     totalClientsRows,
     activeClientsRows,
@@ -49,22 +78,12 @@ export async function GET() {
     db
       .select({ total: sql<string>`COALESCE(SUM(commission_amount::numeric), 0)::text` })
       .from(affiliate_commissions)
-      .where(
-        and(
-          eq(affiliate_commissions.affiliate_id, affiliateId),
-          eq(affiliate_commissions.status, "paid")
-        )
-      ),
+      .where(and(eq(affiliate_commissions.affiliate_id, affiliateId), eq(affiliate_commissions.status, "paid"))),
 
     db
       .select({ total: sql<string>`COALESCE(SUM(commission_amount::numeric), 0)::text` })
       .from(affiliate_commissions)
-      .where(
-        and(
-          eq(affiliate_commissions.affiliate_id, affiliateId),
-          eq(affiliate_commissions.status, "approved")
-        )
-      ),
+      .where(and(eq(affiliate_commissions.affiliate_id, affiliateId), eq(affiliate_commissions.status, "approved"))),
 
     db
       .select({
@@ -93,8 +112,67 @@ export async function GET() {
       .limit(5),
   ]);
 
+  // Phase 3: period-specific queries (require clientIds)
+  let periodCommission = 0;
+  let periodTopupsVolume = 0;
+  let periodTopupsCount = 0;
+  let dailyData: { date: string; topup_volume: number; commission_earned: number }[] = [];
+
+  if (clientIds.length > 0) {
+    const dateCondition = sql`${transactions.created_at} >= ${fromDate.toISOString()} AND ${transactions.created_at} <= ${toDate.toISOString()}`;
+
+    const [periodRows, dailyRows] = await Promise.all([
+      db
+        .select({
+          total_volume: sql<string>`COALESCE(SUM(amount::numeric), 0)::text`,
+          total_count: sql<number>`COUNT(*)::int`,
+          total_commission: sql<string>`COALESCE(SUM(
+            (COALESCE(top_up_fee_amount::numeric, 0) - COALESCE(supplier_fee_amount::numeric, 0))
+            * ${commissionRate}
+          ), 0)::text`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.client_id, clientIds),
+            eq(transactions.type, "topup"),
+            dateCondition
+          )
+        ),
+      db
+        .select({
+          date: sql<string>`DATE(created_at)::text`,
+          topup_volume: sql<string>`COALESCE(SUM(amount::numeric), 0)::text`,
+          commission_earned: sql<string>`COALESCE(SUM(
+            (COALESCE(top_up_fee_amount::numeric, 0) - COALESCE(supplier_fee_amount::numeric, 0))
+            * ${commissionRate}
+          ), 0)::text`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.client_id, clientIds),
+            eq(transactions.type, "topup"),
+            dateCondition
+          )
+        )
+        .groupBy(sql`DATE(created_at)`)
+        .orderBy(sql`DATE(created_at)`),
+    ]);
+
+    periodCommission = parseFloat(periodRows[0]?.total_commission ?? "0");
+    periodTopupsVolume = parseFloat(periodRows[0]?.total_volume ?? "0");
+    periodTopupsCount = periodRows[0]?.total_count ?? 0;
+    dailyData = dailyRows.map((r) => ({
+      date: r.date,
+      topup_volume: parseFloat(r.topup_volume),
+      commission_earned: parseFloat(r.commission_earned),
+    }));
+  }
+
   return NextResponse.json(
     {
+      affiliate_code: affiliateRow?.affiliate_code ?? "",
       total_clients: totalClientsRows[0]?.count ?? 0,
       active_clients: activeClientsRows[0]?.count ?? 0,
       current_month_commission: parseFloat(currentCommissionRows[0]?.commission_amount ?? "0"),
@@ -112,6 +190,10 @@ export async function GET() {
         ...c,
         created_at: c.created_at.toISOString(),
       })),
+      period_commission: periodCommission,
+      period_topups_volume: periodTopupsVolume,
+      period_topups_count: periodTopupsCount,
+      daily_data: dailyData,
     },
     { headers: { "Cache-Control": "no-store" } }
   );
