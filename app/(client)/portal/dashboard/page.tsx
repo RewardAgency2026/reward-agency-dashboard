@@ -18,7 +18,7 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  payment: "Payment",
+  payment: "Credit Client Wallet",
   topup: "Top Up",
   commission_fee: "Commission",
   withdraw: "Withdrawal",

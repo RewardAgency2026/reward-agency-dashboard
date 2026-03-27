@@ -41,7 +41,7 @@ const TRANSACTION_COLORS: Record<string, string> = {
 };
 
 const TRANSACTION_LABELS: Record<string, string> = {
-  payment: "Payment",
+  payment: "Credit Client Wallet",
   topup: "Top Up",
   commission_fee: "Commission Fee",
   withdraw: "Withdraw",

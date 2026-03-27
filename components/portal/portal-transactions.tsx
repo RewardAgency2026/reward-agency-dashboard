@@ -18,7 +18,7 @@ interface TransactionRow {
 
 const TYPE_TABS = [
   { value: "", label: "All" },
-  { value: "payment", label: "Payment" },
+  { value: "payment", label: "Credit Client Wallet" },
   { value: "topup", label: "Top Up" },
   { value: "commission_fee", label: "Commission" },
   { value: "withdraw", label: "Withdraw" },
@@ -35,7 +35,7 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  payment: "Payment",
+  payment: "Credit Client Wallet",
   topup: "Top Up",
   commission_fee: "Commission",
   withdraw: "Withdrawal",

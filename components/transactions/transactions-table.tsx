@@ -38,7 +38,7 @@ interface Props {
 
 const TYPE_TABS = [
   { value: "", label: "All" },
-  { value: "payment", label: "Payment to Client" },
+  { value: "payment", label: "Credit Client Wallet" },
   { value: "topup", label: "Top Up" },
   { value: "commission_fee", label: "Client Commission Fee" },
   { value: "withdraw", label: "Withdraw" },
@@ -56,7 +56,7 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  payment: "Payment to Client",
+  payment: "Credit Client Wallet",
   topup: "Top Up",
   commission_fee: "Client Commission Fee",
   withdraw: "Withdraw",

@@ -105,7 +105,7 @@ const TXN_TYPE_BADGE: Record<string, string> = {
 };
 
 const TXN_TYPE_LABEL: Record<string, string> = {
-  payment: "Payment to Client",
+  payment: "Credit Client Wallet",
   topup: "Top Up",
   commission_fee: "Client Commission Fee",
   withdraw: "Withdraw",
