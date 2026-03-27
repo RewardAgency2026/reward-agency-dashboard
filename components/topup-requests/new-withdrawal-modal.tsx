@@ -18,7 +18,6 @@ interface AdAccount {
 interface WithdrawalResult {
   withdrawal_amount: number;
   commission_refund: number;
-  provider_fee_refund: number;
   total_credited_to_client: number;
   new_wallet_balance: number;
   ad_account_status: string;
@@ -82,13 +81,14 @@ export function NewWithdrawalModal({ adAccounts, onClose }: Props) {
             <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-4 space-y-2">
               <p className="text-sm font-medium text-emerald-800">Successfully processed</p>
               <div className="grid grid-cols-2 gap-1 text-sm">
-                <span className="text-gray-500">Withdrawal amount</span>
-                <span className="font-mono text-right">${result.withdrawal_amount.toFixed(2)}</span>
-                <span className="text-gray-500">Commission refund</span>
-                <span className="font-mono text-right text-emerald-600">+${result.commission_refund.toFixed(2)}</span>
-                <span className="text-gray-500">Total credited</span>
+                <span className="text-gray-500">Withdrawal Amount</span>
+                <span className="font-mono text-right">+${result.withdrawal_amount.toFixed(2)}</span>
+                <span className="text-gray-500">Commission Refund</span>
+                <span className="font-mono text-right">+${result.commission_refund.toFixed(2)}</span>
+                <span className="col-span-2 border-t border-emerald-200 my-1" />
+                <span className="font-medium text-gray-700">Total Credited to Wallet</span>
                 <span className="font-mono font-semibold text-right text-emerald-700">+${result.total_credited_to_client.toFixed(2)}</span>
-                <span className="text-gray-500">New wallet balance</span>
+                <span className="text-gray-500">New Balance After</span>
                 <span className="font-mono font-semibold text-right">${result.new_wallet_balance.toFixed(2)}</span>
               </div>
             </div>

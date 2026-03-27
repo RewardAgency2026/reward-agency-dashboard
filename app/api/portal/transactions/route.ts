@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
 
-  const conditions = [eq(transactions.client_id, clientId)];
+  const conditions = [
+    eq(transactions.client_id, clientId),
+    sql`${transactions.type} != 'supplier_fee_refund'`,
+  ];
   if (typeFilter) conditions.push(eq(transactions.type, typeFilter));
   if (from) conditions.push(sql`${transactions.created_at} >= ${from}`);
   if (to) conditions.push(sql`${transactions.created_at} < ${to}`);

@@ -57,7 +57,6 @@ const STATUS_TABS = [
   { value: "insufficient_funds", label: "Insufficient Funds" },
   { value: "executed", label: "Executed" },
   { value: "rejected", label: "Rejected" },
-  { value: "withdrawals", label: "Withdrawals" },
 ] as const;
 
 // Badge and label helpers operate on the composite (status + insufficient_funds) key
@@ -102,15 +101,27 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
   const pendingCount = requests.filter((r) => r.status === "pending" && !r.insufficient_funds).length;
   const insufficientCount = requests.filter((r) => r.status === "pending" && r.insufficient_funds).length;
 
-  const isWithdrawalsTab = statusFilter === "withdrawals";
-
-  const filtered = statusFilter === "insufficient_funds"
+  const filteredRequests = statusFilter === "insufficient_funds"
     ? requests.filter((r) => r.status === "pending" && r.insufficient_funds)
-    : statusFilter && statusFilter !== "withdrawals"
+    : statusFilter
     ? requests.filter((r) => r.status === statusFilter)
-    : statusFilter === "withdrawals"
-    ? []
     : requests;
+
+  // In "All" tab, merge top-up requests and withdrawals sorted by date desc
+  type CombinedRow =
+    | { _kind: "topup"; row: TopupRequestRow }
+    | { _kind: "withdrawal"; row: WithdrawalRow };
+
+  const combinedRows: CombinedRow[] = statusFilter === ""
+    ? [
+        ...filteredRequests.map((r): CombinedRow => ({ _kind: "topup", row: r })),
+        ...withdrawals.map((w): CombinedRow => ({ _kind: "withdrawal", row: w })),
+      ].sort((a, b) => {
+        const aDate = a._kind === "topup" ? a.row.created_at : a.row.created_at;
+        const bDate = b._kind === "topup" ? b.row.created_at : b.row.created_at;
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      })
+    : filteredRequests.map((r): CombinedRow => ({ _kind: "topup", row: r }));
 
   function handleExecuted(id: string) {
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "executed", executed_at: new Date().toISOString() } : r));
@@ -230,7 +241,6 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
           {STATUS_TABS.map((tab) => {
             const count = tab.value === "pending" ? pendingCount
               : tab.value === "insufficient_funds" ? insufficientCount
-              : tab.value === "withdrawals" ? (withdrawals.length > 0 ? withdrawals.length : null)
               : null;
             return (
               <button
@@ -258,58 +268,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
         </div>
       </div>
 
-      {isWithdrawalsTab ? (
-        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-          {withdrawals.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">No withdrawals found.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Client</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Ad Account</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {withdrawals.map((w) => (
-                  <tr key={w.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3 text-xs text-gray-500">{formatDate(w.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{w.client_name ?? "—"}</p>
-                      <p className="text-xs font-mono text-gray-400">{w.client_code ?? ""}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {w.ad_account_platform && <PlatformIcon platform={w.ad_account_platform} size={18} />}
-                        <div>
-                          <p className="font-medium text-gray-900">{w.ad_account_name ?? "—"}</p>
-                          <p className="text-xs text-gray-400 capitalize">{w.ad_account_platform ?? ""}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-mono font-medium text-gray-900">{parseFloat(w.amount).toFixed(2)}</p>
-                      <p className="text-xs text-gray-400">{w.currency}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{w.description ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
-                        Withdrawal
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ) : (
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        {filtered.length === 0 ? (
+        {combinedRows.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No requests found.</p>
         ) : (
           <table className="w-full text-sm">
@@ -325,6 +285,7 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Supplier</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Category</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
                 {isAdmin && (
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</th>
@@ -332,10 +293,50 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((r) => {
+              {combinedRows.map((item) => {
+                if (item._kind === "withdrawal") {
+                  const w = item.row;
+                  return (
+                    <tr key={`w-${w.id}`} className="hover:bg-gray-50/50">
+                      {!hideClientColumn && (
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-gray-900">{w.client_name ?? "—"}</p>
+                          <p className="text-xs font-mono text-gray-400">{w.client_code ?? ""}</p>
+                        </td>
+                      )}
+                      {!hideClientColumn && (
+                        <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                      )}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {w.ad_account_platform && <PlatformIcon platform={w.ad_account_platform} size={18} />}
+                          <div>
+                            <p className="font-medium text-gray-900">{w.ad_account_name ?? "—"}</p>
+                            <p className="text-xs text-gray-400 capitalize">{w.ad_account_platform ?? ""}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{w.supplier_name ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-mono font-medium text-gray-900">{parseFloat(w.amount).toFixed(2)}</p>
+                        <p className="text-xs text-gray-400">{w.currency}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400">—</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+                          Withdrawal
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{formatDate(w.created_at)}</td>
+                      {isAdmin && <td className="px-4 py-3" />}
+                    </tr>
+                  );
+                }
+
+                const r = item.row;
                 const canAct = isAdmin && r.status === "pending";
                 return (
-                  <tr key={r.id} className="hover:bg-gray-50/50">
+                  <tr key={`t-${r.id}`} className="hover:bg-gray-50/50">
                     {!hideClientColumn && (
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{r.client_name}</p>
@@ -369,6 +370,11 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                     <td className="px-4 py-3">
                       <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", getStatusBadge(r.status, r.insufficient_funds))}>
                         {getStatusLabel(r.status, r.insufficient_funds)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        Top Up
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">{formatDate(r.created_at)}</td>
@@ -425,7 +431,6 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
           </table>
         )}
       </div>
-      )}
     </div>
   );
 }
