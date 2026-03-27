@@ -22,6 +22,8 @@ export async function GET() {
     paymentSums,
     topupSums,
     adAccountCounts,
+    withdrawalSums,
+    feeRefundSums,
   ] = await Promise.all([
     db
       .select({
@@ -79,12 +81,36 @@ export async function GET() {
       })
       .from(ad_accounts)
       .groupBy(ad_accounts.supplier_id),
+
+    // Total ad_account_withdrawal per supplier (via ad_accounts join)
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(eq(transactions.type, "ad_account_withdrawal"))
+      .groupBy(ad_accounts.supplier_id),
+
+    // Total supplier_fee_refund per supplier (via ad_accounts join)
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(eq(transactions.type, "supplier_fee_refund"))
+      .groupBy(ad_accounts.supplier_id),
   ]);
 
   // Build lookup maps
   const paymentMap = new Map(paymentSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
   const topupMap = new Map(topupSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
   const adCountMap = new Map(adAccountCounts.map((r) => [r.supplier_id, r.count]));
+  const withdrawalMap = new Map(withdrawalSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const feeRefundMap = new Map(feeRefundSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
 
   // Group sub-accounts by supplier_id
   const subAccountMap = new Map<string, typeof allSubAccounts>();
@@ -114,7 +140,7 @@ export async function GET() {
         kpis: {
           total_payments_sent: totalPayments,
           total_topups: totalTopups,
-          remaining_balance: totalPayments - totalTopups,
+          remaining_balance: totalPayments - totalTopups + (withdrawalMap.get(s.id) ?? 0) + (feeRefundMap.get(s.id) ?? 0),
           total_ad_accounts: adCountMap.get(s.id) ?? 0,
           total_sub_accounts: subAccounts.length,
         },

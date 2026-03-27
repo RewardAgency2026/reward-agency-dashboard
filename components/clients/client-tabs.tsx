@@ -102,6 +102,9 @@ const TXN_TYPE_BADGE: Record<string, string> = {
   withdraw: "bg-orange-50 text-orange-700 border border-orange-200",
   refund: "bg-red-50 text-red-700 border border-red-200",
   spend_record: "bg-gray-100 text-gray-600",
+  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  supplier_fee_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
 const TXN_TYPE_LABEL: Record<string, string> = {
@@ -111,6 +114,9 @@ const TXN_TYPE_LABEL: Record<string, string> = {
   withdraw: "Withdraw",
   refund: "Refund",
   spend_record: "Spend Record",
+  ad_account_withdrawal: "Ad Account Withdrawal",
+  commission_refund: "Commission Refund",
+  supplier_fee_refund: "Provider Fee Refund",
 };
 
 const TXN_AMOUNT_COLOR: Record<string, string> = {
@@ -119,7 +125,12 @@ const TXN_AMOUNT_COLOR: Record<string, string> = {
   withdraw: "text-orange-600",
   refund: "text-red-600",
   spend_record: "text-gray-500",
+  ad_account_withdrawal: "text-emerald-600",
+  commission_refund: "text-emerald-600",
+  supplier_fee_refund: "text-emerald-600",
 };
+
+const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund", "supplier_fee_refund"]);
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -144,8 +155,8 @@ function formatDate(iso: string) {
 
 function formatAmount(txn: Transaction) {
   const val = parseFloat(txn.amount);
-  const isDebit = txn.type !== "payment";
-  return `${isDebit ? "−" : "+"}${val.toFixed(2)}`;
+  const isCredit = CREDIT_TYPES.has(txn.type);
+  return `${isCredit ? "+" : "−"}${val.toFixed(2)}`;
 }
 
 export function ClientTabs({ client, affiliates, suppliers, canCredit, isAdmin, topupRequests }: Props) {

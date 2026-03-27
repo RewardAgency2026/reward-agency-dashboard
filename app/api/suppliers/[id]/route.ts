@@ -29,7 +29,7 @@ export async function GET(
     .limit(1);
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [subAccountRows, adAccountRows, payments, paymentSumRows, topupSumRows] = await Promise.all([
+  const [subAccountRows, adAccountRows, payments, paymentSumRows, topupSumRows, withdrawalSumRows, feeRefundSumRows] = await Promise.all([
     db.select().from(supplier_sub_accounts).where(eq(supplier_sub_accounts.supplier_id, params.id)),
 
     db
@@ -68,6 +68,24 @@ export async function GET(
         eq(transactions.type, "topup"),
         eq(ad_accounts.supplier_id, params.id)
       )),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(and(
+        eq(transactions.type, "ad_account_withdrawal"),
+        eq(ad_accounts.supplier_id, params.id)
+      )),
+
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(and(
+        eq(transactions.type, "supplier_fee_refund"),
+        eq(ad_accounts.supplier_id, params.id)
+      )),
   ]);
 
   // Fetch fees for all sub-accounts
@@ -99,6 +117,8 @@ export async function GET(
 
   const totalPayments = parseFloat(paymentSumRows[0]?.total ?? "0");
   const totalTopups = parseFloat(topupSumRows[0]?.total ?? "0");
+  const totalWithdrawals = parseFloat(withdrawalSumRows[0]?.total ?? "0");
+  const totalFeeRefunds = parseFloat(feeRefundSumRows[0]?.total ?? "0");
 
   return NextResponse.json({
     ...supplier,
@@ -108,7 +128,7 @@ export async function GET(
     kpis: {
       total_payments_sent: totalPayments,
       total_topups: totalTopups,
-      remaining_balance: totalPayments - totalTopups,
+      remaining_balance: totalPayments - totalTopups + totalWithdrawals + totalFeeRefunds,
       total_ad_accounts: adAccountRows.length,
       total_sub_accounts: subAccountRows.length,
     },

@@ -2,8 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 import { TopupRequestsTable } from "@/components/topup-requests/topup-requests-table";
 import { NewRequestModal } from "@/components/topup-requests/new-request-modal";
+import { NewWithdrawalModal } from "@/components/topup-requests/new-withdrawal-modal";
 
 function TableSkeleton() {
   return (
@@ -28,6 +30,7 @@ function TableSkeleton() {
 export default function TopupRequestsPage() {
   const { data: session } = useSession();
   const isAdmin = ["admin", "team"].includes(session?.user.role ?? "");
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["topup-requests"],
@@ -51,6 +54,12 @@ export default function TopupRequestsPage() {
     queryKey: ["suppliers"],
     queryFn: () => fetch("/api/suppliers").then((r) => r.json()),
     enabled: isAdmin,
+  });
+
+  const { data: withdrawals = [] } = useQuery({
+    queryKey: ["withdrawals"],
+    queryFn: () => fetch("/api/ad-account-withdrawals").then((r) => r.json()),
+    staleTime: 0,
   });
 
   // Build supplier fee map: "subAccountId:platform" -> fee_rate string
@@ -102,18 +111,47 @@ export default function TopupRequestsPage() {
     status: a.status,
   }));
 
+  const withdrawalAdAccounts = (adAccountsRaw as Array<{
+    id: string; account_name: string; account_id: string; platform: string;
+    client_id: string; client_name: string | null; client_code: string | null; status: string;
+  }>)
+    .filter((a) => a.status === "active")
+    .map((a) => ({
+      id: a.id,
+      account_name: a.account_name,
+      account_id: a.account_id,
+      platform: a.platform,
+      client_id: a.client_id,
+      client_name: a.client_name ?? "",
+      client_code: a.client_code ?? "",
+    }));
+
   return (
     <div>
+      {showWithdrawalModal && (
+        <NewWithdrawalModal
+          adAccounts={withdrawalAdAccounts}
+          onClose={() => setShowWithdrawalModal(false)}
+        />
+      )}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Top Ups</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Top Ups &amp; Withdrawals</h1>
         {isAdmin && (
-          <NewRequestModal clients={clientOptions} adAccounts={adAccountOptions} label="New Top-Up" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWithdrawalModal(true)}
+              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+            >
+              New Withdrawal
+            </button>
+            <NewRequestModal clients={clientOptions} adAccounts={adAccountOptions} label="New Top-Up" />
+          </div>
         )}
       </div>
       {isLoading ? (
         <TableSkeleton />
       ) : (
-        <TopupRequestsTable requests={requests ?? []} isAdmin={isAdmin} />
+        <TopupRequestsTable requests={requests ?? []} isAdmin={isAdmin} withdrawals={withdrawals} />
       )}
     </div>
   );

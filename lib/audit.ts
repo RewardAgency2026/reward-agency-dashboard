@@ -13,7 +13,8 @@ export type AuditAction =
   | "supplier_updated"
   | "affiliate_created"
   | "affiliate_updated"
-  | "client_onboarded";
+  | "client_onboarded"
+  | "ad_account_withdrawal";
 
 export async function logAudit(params: {
   userId: string;

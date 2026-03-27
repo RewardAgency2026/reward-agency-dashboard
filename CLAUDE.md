@@ -162,6 +162,14 @@ Single-row agency configuration.
    - Daily reminder cron (`/api/cron/commission-reminders`) emails admins if any `pending_approval` records are unreviewed; urgent variant after 7 days
    - The old finalize route (`PATCH /api/affiliate-commissions/[id]/finalize`) returns 410 Gone (retired)
 
+10. **Ad Account Withdrawal** — withdrawing funds from an ad account creates 3 transactions atomically:
+    - `ad_account_withdrawal` (credits client wallet, shown in agency + client views)
+    - `commission_refund` (credits client wallet, shown in agency + client views)
+    - `supplier_fee_refund` (internal only, **never shown to clients or affiliates**)
+    - Wallet balance includes `ad_account_withdrawal` and `commission_refund` as credits
+    - Supplier balance: `total_payments - total_topups + total_ad_account_withdrawals + total_supplier_fee_refunds`
+    - Affiliate preview is decremented by negative delta (reverses commission on withdrawal)
+
 ---
 
 ## Transaction Color Coding (UI)
@@ -213,6 +221,7 @@ To be added in Sprint 4.
 | Prod Readiness | ✅ Done | router.refresh() after mutations, write-through cached_balance, supplier_id removed from topup_requests, service layer (wallet/topup/commission), reconcile endpoint, all 106 tests pass |
 | Sprint 9 | ✅ Done | Affiliate portal (dashboard, clients, commissions, referral link, profile, 5 API routes, 18 tests) |
 | Sprint 10 — Commissions | ✅ Done | Automatic commission workflow (preview→pending_approval→approved→paid), cron jobs, approve/reject/approve-all/mark-paid APIs, agency sidebar badge, affiliate portal status updates, 22 tests |
+| Ad Account Withdrawal | ✅ Done | New transaction types (ad_account_withdrawal/commission_refund/supplier_fee_refund), POST API with fee calculation and affiliate preview reversal, UI modal, supplier balance formula update, client portal display |
 | Sprint 10 — P&L | 🔄 Next | P&L Report + Invoices |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
 

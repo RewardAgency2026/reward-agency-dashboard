@@ -23,6 +23,8 @@ const TYPE_TABS = [
   { value: "commission_fee", label: "Commission" },
   { value: "withdraw", label: "Withdraw" },
   { value: "refund", label: "Refund" },
+  { value: "ad_account_withdrawal", label: "Ad Account Withdrawal" },
+  { value: "commission_refund", label: "Fee Refund" },
 ] as const;
 
 const TYPE_BADGE: Record<string, string> = {
@@ -32,6 +34,8 @@ const TYPE_BADGE: Record<string, string> = {
   withdraw: "bg-red-50 text-red-600 border border-red-200",
   refund: "bg-red-50 text-red-600 border border-red-200",
   spend_record: "bg-gray-100 text-gray-500 border border-gray-200",
+  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -41,9 +45,11 @@ const TYPE_LABELS: Record<string, string> = {
   withdraw: "Withdrawal",
   refund: "Refund",
   spend_record: "Spend Record",
+  ad_account_withdrawal: "Ad Account Withdrawal",
+  commission_refund: "Fee Refund",
 };
 
-const CREDIT_TYPES = new Set(["payment"]);
+const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund"]);
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {

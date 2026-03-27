@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { label: "Clients", href: "/clients", icon: Users },
   { label: "Ad Accounts", href: "/ad-accounts", icon: MonitorPlay },
   { label: "Suppliers", href: "/suppliers", icon: Truck },
-  { label: "Top Ups", href: "/topup-requests", icon: ArrowUpCircle, badge: true },
+  { label: "Top Ups & Withdrawals", href: "/topup-requests", icon: ArrowUpCircle, badge: true },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "P&L Report", href: "/pnl", icon: BarChart2 },

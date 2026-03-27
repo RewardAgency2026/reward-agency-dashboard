@@ -9,7 +9,7 @@ export async function calculateWalletBalance(
 ): Promise<number> {
   const [row] = await db
     .select({
-      payments: sql<string>`COALESCE(SUM(CASE WHEN type = 'payment' THEN amount::numeric ELSE 0 END), 0)`,
+      payments: sql<string>`COALESCE(SUM(CASE WHEN type IN ('payment','ad_account_withdrawal','commission_refund') THEN amount::numeric ELSE 0 END), 0)`,
       classic_out: sql<string>`COALESCE(SUM(CASE WHEN type IN ('topup','withdraw','refund') THEN amount::numeric ELSE 0 END), 0)`,
       spends: sql<string>`COALESCE(SUM(CASE WHEN type = 'spend_record' THEN amount::numeric ELSE 0 END), 0)`,
       commission_fees: sql<string>`COALESCE(SUM(CASE WHEN type = 'commission_fee' THEN amount::numeric ELSE 0 END), 0)`,
@@ -34,7 +34,7 @@ export async function calculateWalletBalances(
   const rows = await db
     .select({
       client_id: transactions.client_id,
-      payments: sql<string>`COALESCE(SUM(CASE WHEN type = 'payment' THEN amount::numeric ELSE 0 END), 0)`,
+      payments: sql<string>`COALESCE(SUM(CASE WHEN type IN ('payment','ad_account_withdrawal','commission_refund') THEN amount::numeric ELSE 0 END), 0)`,
       classic_out: sql<string>`COALESCE(SUM(CASE WHEN type IN ('topup','withdraw','refund') THEN amount::numeric ELSE 0 END), 0)`,
       spends: sql<string>`COALESCE(SUM(CASE WHEN type = 'spend_record' THEN amount::numeric ELSE 0 END), 0)`,
       commission_fees: sql<string>`COALESCE(SUM(CASE WHEN type = 'commission_fee' THEN amount::numeric ELSE 0 END), 0)`,

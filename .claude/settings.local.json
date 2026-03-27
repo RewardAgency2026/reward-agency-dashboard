@@ -48,7 +48,8 @@
       "Bash(rm \"/Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate/route.ts\")",
       "Bash(rmdir \"/Users/simon/Projects/reward-agency-dashboard/app/api/affiliates/[id]/commissions/calculate\")",
       "Bash(ls -la /Users/simon/Projects/reward-agency-dashboard/app/\\\\\\(client\\\\\\)/)",
-      "Bash(npx tsx --env-file .env.local -e \":*)"
+      "Bash(npx tsx --env-file .env.local -e \":*)",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }

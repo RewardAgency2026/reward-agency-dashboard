@@ -44,6 +44,9 @@ const TYPE_TABS = [
   { value: "withdraw", label: "Withdraw" },
   { value: "refund", label: "Refund" },
   { value: "spend_record", label: "Spend Record" },
+  { value: "ad_account_withdrawal", label: "Ad Account Withdrawal" },
+  { value: "commission_refund", label: "Commission Refund" },
+  { value: "supplier_fee_refund", label: "Provider Fee Refund" },
 ] as const;
 
 const TYPE_BADGE: Record<string, string> = {
@@ -53,6 +56,9 @@ const TYPE_BADGE: Record<string, string> = {
   withdraw: "bg-orange-50 text-orange-700 border border-orange-200",
   refund: "bg-red-50 text-red-700 border border-red-200",
   spend_record: "bg-gray-100 text-gray-600",
+  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  supplier_fee_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -62,7 +68,12 @@ const TYPE_LABELS: Record<string, string> = {
   withdraw: "Withdraw",
   refund: "Refund",
   spend_record: "Spend Record",
+  ad_account_withdrawal: "Ad Account Withdrawal",
+  commission_refund: "Commission Refund",
+  supplier_fee_refund: "Provider Fee Refund",
 };
+
+const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund", "supplier_fee_refund"]);
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });

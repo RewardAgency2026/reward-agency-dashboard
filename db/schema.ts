@@ -129,7 +129,7 @@ export const transactions = pgTable("transactions", {
     .references(() => clients.id, { onDelete: "restrict" }),
   ad_account_id: uuid("ad_account_id").references(() => ad_accounts.id, { onDelete: "set null" }),
   supplier_id: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
-  type: text("type").notNull(), // payment|topup|withdraw|refund|spend_record|commission_fee
+  type: text("type").notNull(), // payment|topup|withdraw|refund|spend_record|commission_fee|ad_account_withdrawal|commission_refund|supplier_fee_refund
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("USD"), // USD|USDT|USDC|EUR
   is_crypto: boolean("is_crypto").notNull().default(false),
