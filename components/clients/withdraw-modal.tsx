@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { X, MinusCircle } from "lucide-react";
 
@@ -19,7 +18,6 @@ function fmt(n: number) {
 
 export function WithdrawModal({ clientId, walletBalance, canWithdraw }: Props) {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +66,10 @@ export function WithdrawModal({ clientId, walletBalance, canWithdraw }: Props) {
         return;
       }
       setSuccess(`${type === "withdraw" ? "Withdrawal" : "Refund"} of ${fmt(num)} USD processed`);
-      setTimeout(() => {
-        handleClose();
-        queryClient.invalidateQueries({ queryKey: ["clients", clientId] });
-        queryClient.invalidateQueries({ queryKey: ["clients"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        router.refresh();
-      }, 1200);
+      queryClient.invalidateQueries({ queryKey: ["clients", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setTimeout(handleClose, 1200);
     } catch {
       setError("Network error");
     } finally {

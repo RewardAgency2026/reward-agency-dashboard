@@ -126,6 +126,6 @@ export async function GET() {
       created_at: r.created_at.toISOString(),
     })),
   }, {
-    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" },
+    headers: { "Cache-Control": "no-store" },
   });
 }

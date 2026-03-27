@@ -105,7 +105,7 @@ export async function GET(
     transactions: recentTxns,
     ad_accounts: adAccountsList,
   }, {
-    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
