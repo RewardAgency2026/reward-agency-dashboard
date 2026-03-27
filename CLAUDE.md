@@ -207,8 +207,8 @@ To be added in Sprint 4.
 | Forgot/Reset Password | ✅ Done | Forgot password flow (email link), reset page, admin client reset, password_reset_tokens table |
 | Arch Fixes | ✅ Done | Atomic commission updates, idempotency (topup_request_id), pinned NextAuth, awaited audit logs, fee types, JWT expiry, onboarding rate limit, daily backup cron |
 | Prod Readiness | ✅ Done | router.refresh() after mutations, write-through cached_balance, supplier_id removed from topup_requests, service layer (wallet/topup/commission), reconcile endpoint, all 106 tests pass |
-| Sprint 9 | 🔄 Next | P&L + Invoices |
-| Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
+| Sprint 9 | ✅ Done | Affiliate portal (dashboard, clients, commissions, referral link, profile, 5 API routes, 18 tests) |
+| Sprint 10 | 🔄 Next | P&L + Invoices |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
 
 ---

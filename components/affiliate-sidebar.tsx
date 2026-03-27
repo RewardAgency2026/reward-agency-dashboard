@@ -16,9 +16,10 @@ const NAV_ITEMS = [
 
 interface Props {
   userName: string;
+  affiliateCode: string;
 }
 
-export function AffiliateSidebar({ userName }: Props) {
+export function AffiliateSidebar({ userName, affiliateCode }: Props) {
   const pathname = usePathname();
 
   return (
@@ -68,7 +69,9 @@ export function AffiliateSidebar({ userName }: Props) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white">{userName}</p>
-            <p className="truncate text-xs text-[hsl(215,20%,65%)]">Affiliate</p>
+            {affiliateCode && (
+              <p className="truncate text-xs font-mono text-[hsl(215,20%,65%)]">{affiliateCode}</p>
+            )}
           </div>
         </div>
         <button

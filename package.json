@@ -16,7 +16,8 @@
     "test:sprint5": "tsx --test tests/sprint5.test.ts",
     "test:sprint6": "tsx --test tests/sprint6.test.ts",
     "test:sprint7": "tsx --test tests/sprint7.test.ts",
-    "test:sprint8": "tsx --test tests/sprint8.test.ts"
+    "test:sprint8": "tsx --test tests/sprint8.test.ts",
+    "test:sprint9": "tsx --test tests/sprint9.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
