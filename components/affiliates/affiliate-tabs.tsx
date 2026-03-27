@@ -441,7 +441,7 @@ export function AffiliateTabs({ affiliateId }: Props) {
                                         <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Client</th>
                                         <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Ad Account</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Top Up</th>
-                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission</th>
+                                        <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Client Commission</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Provider Fee</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Gross Margin</th>
                                         <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission Due</th>

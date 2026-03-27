@@ -48,12 +48,15 @@ interface Commission {
 interface DetailRow {
   id: string;
   created_at: string;
-  amount: string;
+  top_up_amount: string;
   currency: string;
   client_name: string | null;
   client_code: string | null;
   ad_account_name: string | null;
+  ad_account_id: string | null;
   ad_account_platform: string | null;
+  gross_margin: string;
+  commission_due: string;
 }
 
 function CommissionDetail({ commissionId }: { commissionId: string }) {
@@ -84,7 +87,9 @@ function CommissionDetail({ commissionId }: { commissionId: string }) {
           <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Date</th>
           <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Client</th>
           <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wide">Ad Account</th>
-          <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Amount</th>
+          <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Top Up Amount</th>
+          <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Gross Margin</th>
+          <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wide">Commission Due</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
@@ -102,9 +107,18 @@ function CommissionDetail({ commissionId }: { commissionId: string }) {
                 {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={14} />}
                 <span className="text-gray-700">{r.ad_account_name}</span>
               </div>
+              {r.ad_account_id && (
+                <p className="font-mono text-gray-400 mt-0.5">{r.ad_account_id}</p>
+              )}
+            </td>
+            <td className="px-4 py-2 text-right font-mono text-gray-700 whitespace-nowrap">
+              {parseFloat(r.top_up_amount).toFixed(2)} {r.currency}
             </td>
             <td className="px-4 py-2 text-right font-mono font-medium text-gray-900">
-              {parseFloat(r.amount).toFixed(2)} {r.currency}
+              ${parseFloat(r.gross_margin).toFixed(2)}
+            </td>
+            <td className="px-4 py-2 text-right font-mono font-semibold text-[hsl(236,85%,55%)]">
+              ${parseFloat(r.commission_due).toFixed(2)}
             </td>
           </tr>
         ))}

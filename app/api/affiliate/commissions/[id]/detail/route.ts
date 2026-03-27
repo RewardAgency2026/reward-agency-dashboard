@@ -12,9 +12,15 @@ export async function GET(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (session.user.userType !== "affiliate") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // Verify ownership
+  // Verify ownership and get commission_rate for computing commission_due
   const [commission] = await db
-    .select()
+    .select({
+      id: affiliate_commissions.id,
+      affiliate_id: affiliate_commissions.affiliate_id,
+      period_year: affiliate_commissions.period_year,
+      period_month: affiliate_commissions.period_month,
+      commission_rate: affiliate_commissions.commission_rate,
+    })
     .from(affiliate_commissions)
     .where(
       and(
@@ -41,12 +47,16 @@ export async function GET(
     .select({
       id: transactions.id,
       created_at: transactions.created_at,
-      amount: transactions.amount,
+      top_up_amount: transactions.amount,
       currency: transactions.currency,
       client_name: clients.name,
       client_code: clients.client_code,
       ad_account_name: ad_accounts.account_name,
+      ad_account_id: ad_accounts.account_id,
       ad_account_platform: ad_accounts.platform,
+      // Compute gross_margin server-side; never expose individual fee amounts
+      top_up_fee_amount: transactions.top_up_fee_amount,
+      supplier_fee_amount: transactions.supplier_fee_amount,
     })
     .from(transactions)
     .leftJoin(clients, eq(transactions.client_id, clients.id))
@@ -61,5 +71,26 @@ export async function GET(
     )
     .orderBy(transactions.created_at);
 
-  return NextResponse.json(rows.map((r) => ({ ...r, created_at: r.created_at.toISOString() })));
+  const commissionRate = parseFloat(commission.commission_rate) / 100;
+
+  return NextResponse.json(
+    rows.map((r) => {
+      const gross_margin =
+        parseFloat(r.top_up_fee_amount) - parseFloat(r.supplier_fee_amount ?? "0");
+      const commission_due = gross_margin * commissionRate;
+      return {
+        id: r.id,
+        created_at: r.created_at.toISOString(),
+        top_up_amount: r.top_up_amount,
+        currency: r.currency,
+        client_name: r.client_name,
+        client_code: r.client_code,
+        ad_account_name: r.ad_account_name,
+        ad_account_id: r.ad_account_id,
+        ad_account_platform: r.ad_account_platform,
+        gross_margin: gross_margin.toFixed(2),
+        commission_due: commission_due.toFixed(2),
+      };
+    })
+  );
 }
