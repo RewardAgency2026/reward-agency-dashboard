@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuditLogTable } from "@/components/audit-log/audit-log-table";
 import toast from "react-hot-toast";
@@ -45,6 +45,8 @@ interface AuditLogRow {
 
 function AgencyInfoTab() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "admin";
   const { data: settings, isLoading } = useQuery<SettingsRow>({
     queryKey: ["settings"],
     queryFn: () => fetch("/api/settings").then((r) => r.json()),
@@ -59,6 +61,8 @@ function AgencyInfoTab() {
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<string | null>(null);
 
   if (settings && !initialized) {
     setAgencyName(settings.agency_name ?? "");
@@ -90,6 +94,25 @@ function AgencyInfoTab() {
       setTimeout(() => setToast(false), 3000);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReconcile() {
+    setReconciling(true);
+    setReconcileResult(null);
+    try {
+      const res = await fetch("/api/admin/reconcile");
+      const data = await res.json();
+      if (res.ok) {
+        setReconcileResult(`Reconciled ${data.updated} of ${data.total} clients.`);
+      } else {
+        setReconcileResult(`Error: ${data.error}`);
+      }
+    } catch {
+      setReconcileResult("Network error during reconciliation.");
+    } finally {
+      setReconciling(false);
+      setTimeout(() => setReconcileResult(null), 5000);
     }
   }
 
@@ -181,13 +204,33 @@ function AgencyInfoTab() {
         />
       </div>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="rounded-lg bg-[hsl(236,85%,55%)] px-6 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] transition-colors disabled:opacity-50"
-      >
-        {saving ? "Saving..." : "Save Settings"}
-      </button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg bg-[hsl(236,85%,55%)] px-6 py-2 text-sm font-medium text-white hover:bg-[hsl(236,85%,48%)] transition-colors disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save Settings"}
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={handleReconcile}
+            disabled={reconciling}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Recompute cached wallet balances for all clients"
+          >
+            <RefreshCw size={14} className={reconciling ? "animate-spin" : ""} />
+            {reconciling ? "Reconciling..." : "Reconcile Balances"}
+          </button>
+        )}
+      </div>
+
+      {reconcileResult && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+          {reconcileResult}
+        </div>
+      )}
     </div>
   );
 }

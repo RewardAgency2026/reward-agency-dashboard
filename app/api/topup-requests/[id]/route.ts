@@ -18,7 +18,6 @@ export async function GET(
       id: topup_requests.id,
       client_id: topup_requests.client_id,
       ad_account_id: topup_requests.ad_account_id,
-      supplier_id: topup_requests.supplier_id,
       amount: topup_requests.amount,
       currency: topup_requests.currency,
       status: topup_requests.status,
@@ -40,7 +39,7 @@ export async function GET(
     .from(topup_requests)
     .leftJoin(clients, eq(topup_requests.client_id, clients.id))
     .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
-    .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
+    .leftJoin(suppliers, eq(ad_accounts.supplier_id, suppliers.id))
     .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))
     .leftJoin(
       supplier_platform_fees,
@@ -93,27 +92,20 @@ export async function DELETE(
 
   await db.delete(topup_requests).where(eq(topup_requests.id, params.id));
 
-  // Audit log (fire-and-forget)
-  db.select({ name: clients.name })
-    .from(clients)
-    .where(eq(clients.id, request.client_id))
-    .limit(1)
-    .then(([c]) => {
-      logAudit({
-        userId: session.user.id,
-        userName: session.user.name ?? session.user.email ?? "Unknown",
-        action: "topup_deleted",
-        details: {
-          topup_request_id: params.id,
-          client_id: request.client_id,
-          client_name: c?.name ?? null,
-          amount: request.amount,
-          currency: request.currency,
-          previous_status: request.status,
-        },
-      });
-    })
-    .catch(() => {});
+  const [c] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, request.client_id)).limit(1);
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "Unknown",
+    action: "topup_deleted",
+    details: {
+      topup_request_id: params.id,
+      client_id: request.client_id,
+      client_name: c?.name ?? null,
+      amount: request.amount,
+      currency: request.currency,
+      previous_status: request.status,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -59,6 +59,8 @@ export const clients = pgTable("clients", {
   setup_monthly_cost: numeric("setup_monthly_cost", { precision: 10, scale: 2 }),
   client_platform_fees: jsonb("client_platform_fees").$type<{ meta: number; google: number; tiktok: number; snapchat: number; linkedin: number } | null>(),
   password_hash: text("password_hash"), // nullable: set via onboarding
+  cached_balance: numeric("cached_balance", { precision: 12, scale: 2 }), // write-through cache — updated on every wallet mutation
+  balance_updated_at: timestamp("balance_updated_at"), // timestamp of last cache update
   created_at: timestamp("created_at").notNull().default(now()),
 });
 
@@ -155,7 +157,6 @@ export const topup_requests = pgTable("topup_requests", {
   ad_account_id: uuid("ad_account_id")
     .notNull()
     .references(() => ad_accounts.id, { onDelete: "restrict" }),
-  supplier_id: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("USD"),
   status: text("status").notNull().default("pending"), // pending|executed|rejected

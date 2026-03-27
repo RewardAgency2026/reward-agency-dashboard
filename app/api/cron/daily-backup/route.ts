@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
     .from(topup_requests)
     .leftJoin(clients, eq(topup_requests.client_id, clients.id))
     .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
-    .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
+    .leftJoin(suppliers, eq(ad_accounts.supplier_id, suppliers.id))
     .leftJoin(
       transactions,
       and(

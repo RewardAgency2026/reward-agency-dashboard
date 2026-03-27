@@ -64,6 +64,8 @@ Client accounts with wallet configuration.
 - `setup_monthly_fee` numeric(10,2) nullable — charged to client
 - `setup_monthly_cost` numeric(10,2) nullable — internal cost
 - `client_platform_fees` jsonb nullable — `{ meta, google, tiktok, snapchat, linkedin }` (% rates)
+- `cached_balance` numeric(12,2) nullable — write-through balance cache; updated on every credit/withdraw/topup execution; reconcile all via `GET /api/admin/reconcile` (admin only)
+- `balance_updated_at` timestamptz nullable — timestamp of last balance cache update
 
 ### `suppliers`
 Ad platform suppliers/resellers.
@@ -92,7 +94,7 @@ All financial movements. **Wallet balance is always computed from this table.**
 
 ### `topup_requests`
 Client requests to top up an ad account.
-- `id` uuid PK, `client_id`, `ad_account_id`, `supplier_id`, `amount`, `currency`
+- `id` uuid PK, `client_id`, `ad_account_id`, `amount`, `currency` (no `supplier_id` — join through ad_accounts.supplier_id)
 - `status` (pending|executed|rejected) — always created as `pending`
 - `insufficient_funds` boolean default false — set true at creation if wallet < amount; never blocks creation
 - `notes`, `executed_by` FK → users, `executed_at`
@@ -204,6 +206,7 @@ To be added in Sprint 4.
 | Sprint 8 | ✅ Done | Client portal (dashboard, accounts, transactions, top-ups, 5 secure API routes, 20 tests) |
 | Forgot/Reset Password | ✅ Done | Forgot password flow (email link), reset page, admin client reset, password_reset_tokens table |
 | Arch Fixes | ✅ Done | Atomic commission updates, idempotency (topup_request_id), pinned NextAuth, awaited audit logs, fee types, JWT expiry, onboarding rate limit, daily backup cron |
+| Prod Readiness | ✅ Done | router.refresh() after mutations, write-through cached_balance, supplier_id removed from topup_requests, service layer (wallet/topup/commission), reconcile endpoint, all 106 tests pass |
 | Sprint 9 | 🔄 Next | P&L + Invoices |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
@@ -348,6 +351,10 @@ reward-agency-dashboard/
 ## Rules for Claude Code
 
 - **Always commit and push** after each completed feature or fix
+- **Service layer** — wallet mutations go through `lib/services/wallet.ts` (`creditWallet`, `debitWallet`), topup execution through `lib/services/topup.ts` (`executeTopup`), affiliate commission updates through `lib/services/commission.ts` (`updateAffiliatePreview`)
+- **Write-through balance cache** — after any wallet mutation, call `updateBalanceCache(clientId, balanceModel)` from `lib/balance.ts`; reconcile all via `GET /api/admin/reconcile`
+- **No supplier_id on topup_requests** — suppliers are always joined through `ad_accounts.supplier_id`; never store supplier_id directly on topup_requests
+- **Manual DB migrations** — Drizzle journal only tracks up to 0008; run new migrations manually using `npx tsx --env-file .env.local` with the Neon client
 - **Always run tests** before reporting a sprint done (`npm run test:sprint3`)
 - **Never store `wallet_balance`** as a DB column — always calculate
 - **Never expose** `supplier_fee_amount`, `supplier_fee_rate_snapshot`, `top_up_fee_amount`, or `crypto_fee_amount` in client/affiliate API responses

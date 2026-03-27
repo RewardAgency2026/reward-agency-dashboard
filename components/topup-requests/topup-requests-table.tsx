@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ExecuteModal } from "./execute-modal";
@@ -10,7 +11,6 @@ export interface TopupRequestRow {
   id: string;
   client_id: string;
   ad_account_id: string;
-  supplier_id: string | null;
   amount: string;
   currency: string;
   status: string;
@@ -70,6 +70,7 @@ function formatDate(iso: string) {
 
 export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideClientColumn }: Props) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [requests, setRequests] = useState(initialRequests);
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -99,6 +100,7 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
     queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+    router.refresh();
   }
 
   async function handleReject(id: string) {
@@ -113,6 +115,7 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
       setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" } : r));
       queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      router.refresh();
     } finally {
       setRejectLoading(false);
     }

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { transactions } from "@/db/schema";
+import { transactions, clients } from "@/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 
 /** Calculate wallet balance for a single client */
@@ -53,6 +53,16 @@ export async function calculateWalletBalances(
     });
   }
   return map;
+}
+
+/** Write-through cache: compute fresh balance and persist to clients.cached_balance */
+export async function updateBalanceCache(clientId: string, balanceModel: string): Promise<number> {
+  const balance = await calculateWalletBalance(clientId, balanceModel);
+  await db.update(clients).set({
+    cached_balance: String(balance),
+    balance_updated_at: new Date(),
+  }).where(eq(clients.id, clientId));
+  return balance;
 }
 
 export function balanceFromData(

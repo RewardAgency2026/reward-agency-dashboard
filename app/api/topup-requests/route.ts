@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { topup_requests, clients, ad_accounts, suppliers, supplier_sub_accounts, supplier_platform_fees, affiliates } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { calculateWalletBalance, calculateWalletBalances, balanceFromData } from "@/lib/balance";
+import { calculateWalletBalance } from "@/lib/balance";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
       id: topup_requests.id,
       client_id: topup_requests.client_id,
       ad_account_id: topup_requests.ad_account_id,
-      supplier_id: topup_requests.supplier_id,
       amount: topup_requests.amount,
       currency: topup_requests.currency,
       status: topup_requests.status,
@@ -35,6 +34,7 @@ export async function GET(req: NextRequest) {
       client_name: clients.name,
       client_code: clients.client_code,
       client_balance_model: clients.balance_model,
+      client_cached_balance: clients.cached_balance,
       ad_account_platform: ad_accounts.platform,
       ad_account_name: ad_accounts.account_name,
       top_up_fee_rate: ad_accounts.top_up_fee_rate,
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     .leftJoin(clients, eq(topup_requests.client_id, clients.id))
     .leftJoin(affiliates, eq(clients.affiliate_id, affiliates.id))
     .leftJoin(ad_accounts, eq(topup_requests.ad_account_id, ad_accounts.id))
-    .leftJoin(suppliers, eq(topup_requests.supplier_id, suppliers.id))
+    .leftJoin(suppliers, eq(ad_accounts.supplier_id, suppliers.id))
     .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))
     .leftJoin(
       supplier_platform_fees,
@@ -59,16 +59,15 @@ export async function GET(req: NextRequest) {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(topup_requests.created_at));
 
-  // Batch compute wallet balances for all unique client IDs
-  const uniqueClientIds = Array.from(new Set(rows.map((r) => r.client_id)));
-  const balanceMap = await calculateWalletBalances(uniqueClientIds);
-
-  const result = rows.map((r) => ({
-    ...r,
-    executed_at: r.executed_at?.toISOString() ?? null,
-    created_at: r.created_at.toISOString(),
-    wallet_balance: balanceFromData(balanceMap.get(r.client_id), r.client_balance_model ?? "classic"),
-  }));
+  const result = rows.map((r) => {
+    const { client_cached_balance, ...rest } = r;
+    return {
+      ...rest,
+      executed_at: r.executed_at?.toISOString() ?? null,
+      created_at: r.created_at.toISOString(),
+      wallet_balance: parseFloat(client_cached_balance ?? "0"),
+    };
+  });
 
   return NextResponse.json(result, {
     headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
@@ -133,7 +132,6 @@ export async function POST(req: NextRequest) {
     .values({
       client_id,
       ad_account_id,
-      supplier_id: adAccount.supplier_id,
       amount: String(amount),
       currency,
       status: "pending",

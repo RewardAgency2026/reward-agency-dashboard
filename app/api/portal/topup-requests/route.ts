@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
     .values({
       client_id: clientId,
       ad_account_id,
-      supplier_id: adAccount.supplier_id,
       amount: String(amount),
       currency,
       status: "pending",
