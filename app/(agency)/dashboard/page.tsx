@@ -82,6 +82,7 @@ export default function DashboardPage() {
     queryKey: ["dashboard"],
     queryFn: () => fetch("/api/dashboard").then((r) => r.json()),
     refetchInterval: 60000,
+    staleTime: 0,
   });
 
   const kpis: DashboardKpis | undefined = data?.kpis;

@@ -65,6 +65,7 @@ export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
       setSuccess(`Wallet credited: ${net.toFixed(2)} ${currency}`);
       setTimeout(() => {
         handleClose();
+        queryClient.invalidateQueries({ queryKey: ["clients", clientId] });
         queryClient.invalidateQueries({ queryKey: ["clients"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }, 1200);

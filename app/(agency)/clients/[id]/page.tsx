@@ -30,12 +30,14 @@ export default function ClientDetailPage() {
     queryKey: ["clients", id],
     queryFn: () => fetch(`/api/clients/${id}`).then((r) => r.json()),
     enabled: !!id,
+    staleTime: 0,
   });
 
   const { data: topupRequests = [] } = useQuery({
     queryKey: ["topup-requests", { client_id: id }],
     queryFn: () => fetch(`/api/topup-requests?client_id=${id}`).then((r) => r.json()),
     enabled: !!id,
+    staleTime: 0,
   });
 
   const { data: affiliates = [] } = useQuery({

@@ -68,6 +68,7 @@ export function WithdrawModal({ clientId, walletBalance, canWithdraw }: Props) {
       setSuccess(`${type === "withdraw" ? "Withdrawal" : "Refund"} of ${fmt(num)} USD processed`);
       setTimeout(() => {
         handleClose();
+        queryClient.invalidateQueries({ queryKey: ["clients", clientId] });
         queryClient.invalidateQueries({ queryKey: ["clients"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }, 1200);

@@ -32,6 +32,7 @@ export default function TopupRequestsPage() {
   const { data: requests, isLoading } = useQuery({
     queryKey: ["topup-requests"],
     queryFn: () => fetch("/api/topup-requests").then((r) => r.json()),
+    staleTime: 0,
   });
 
   const { data: clients = [] } = useQuery({
