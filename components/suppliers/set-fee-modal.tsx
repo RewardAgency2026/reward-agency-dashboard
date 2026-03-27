@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 interface Props {
@@ -15,7 +15,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 export function SetFeeModal({ supplierId, platform, currentRate }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function SetFeeModal({ supplierId, platform, currentRate }: Props) {
         return;
       }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     } catch {
       setError("Network error");
     } finally {

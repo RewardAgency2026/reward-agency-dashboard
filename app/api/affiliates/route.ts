@@ -36,25 +36,43 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Full list with client counts and total commissions paid
-  const rows = await db
-    .select({
-      id: affiliates.id,
-      affiliate_code: affiliates.affiliate_code,
-      name: affiliates.name,
-      email: affiliates.email,
-      company: affiliates.company,
-      commission_rate: affiliates.commission_rate,
-      referral_link: affiliates.referral_link,
-      status: affiliates.status,
-      created_at: affiliates.created_at,
-      clients_count: sql<number>`(SELECT COUNT(*) FROM clients WHERE clients.affiliate_id = ${affiliates.id})`,
-      commissions_paid: sql<string>`COALESCE((SELECT SUM(commission_amount) FROM affiliate_commissions WHERE affiliate_commissions.affiliate_id = ${affiliates.id} AND affiliate_commissions.status = 'paid'), 0)`,
-    })
-    .from(affiliates)
-    .orderBy(desc(affiliates.created_at));
+  // Full list — run 3 queries in parallel instead of N+1 correlated subqueries
+  const [rows, clientCounts, commissionTotals] = await Promise.all([
+    db
+      .select({
+        id: affiliates.id,
+        affiliate_code: affiliates.affiliate_code,
+        name: affiliates.name,
+        email: affiliates.email,
+        company: affiliates.company,
+        commission_rate: affiliates.commission_rate,
+        referral_link: affiliates.referral_link,
+        status: affiliates.status,
+        created_at: affiliates.created_at,
+      })
+      .from(affiliates)
+      .orderBy(desc(affiliates.created_at)),
+    db
+      .select({ affiliate_id: clients.affiliate_id, count: sql<number>`COUNT(*)::int` })
+      .from(clients)
+      .groupBy(clients.affiliate_id),
+    db
+      .select({ affiliate_id: affiliate_commissions.affiliate_id, total: sql<string>`COALESCE(SUM(commission_amount), 0)` })
+      .from(affiliate_commissions)
+      .where(eq(affiliate_commissions.status, "paid"))
+      .groupBy(affiliate_commissions.affiliate_id),
+  ]);
 
-  return NextResponse.json(rows);
+  const clientCountMap = new Map(clientCounts.map((r) => [r.affiliate_id, r.count]));
+  const commissionMap = new Map(commissionTotals.map((r) => [r.affiliate_id, r.total]));
+
+  return NextResponse.json(
+    rows.map((r) => ({
+      ...r,
+      clients_count: clientCountMap.get(r.id) ?? 0,
+      commissions_paid: commissionMap.get(r.id) ?? "0",
+    }))
+  );
 }
 
 export async function POST(req: NextRequest) {

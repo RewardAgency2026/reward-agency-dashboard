@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { PlatformIcon } from "@/components/ui/platform-icon";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -331,7 +331,7 @@ function EditSupplierInline({
   currentEmail: string | null;
   currentStatus: string;
 }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -354,7 +354,7 @@ function EditSupplierInline({
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Update failed"); return; }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     } catch {
       setError("Network error");
     } finally {

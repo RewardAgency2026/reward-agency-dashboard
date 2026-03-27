@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PlatformIcon } from "@/components/ui/platform-icon";
 
@@ -47,7 +47,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function NewRequestModal({ clients, adAccounts, prefillClientId, label }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -123,7 +123,8 @@ export function NewRequestModal({ clients, adAccounts, prefillClientId, label }:
         setError(data.error ?? "Failed to create top up");
       } else {
         handleOpenChange(false);
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }
     } catch {
       setError("Network error");

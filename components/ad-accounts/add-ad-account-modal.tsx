@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function AddAdAccountModal({ clients, suppliers, prefillClientId, label = "Add Ad Account" }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +119,8 @@ export function AddAdAccountModal({ clients, suppliers, prefillClientId, label =
       if (!res.ok) { setError(data.error ?? "Failed to create ad account"); return; }
       setOpen(false);
       reset();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["ad-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     } catch {
       setError("Network error");
     } finally {

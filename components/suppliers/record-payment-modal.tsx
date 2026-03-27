@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, CreditCard } from "lucide-react";
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function RecordPaymentModal({ supplierId }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,8 @@ export function RecordPaymentModal({ supplierId }: Props) {
       }
       setOpen(false);
       reset();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     } catch {
       setError("Network error");
     } finally {

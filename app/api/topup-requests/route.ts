@@ -101,20 +101,20 @@ export async function POST(req: NextRequest) {
 
   const { client_id, ad_account_id, amount, currency, notes } = parsed.data;
 
-  // Verify client exists
-  const [client] = await db
-    .select({ id: clients.id, balance_model: clients.balance_model })
-    .from(clients)
-    .where(eq(clients.id, client_id))
-    .limit(1);
+  // Verify client + ad account in parallel
+  const [[client], [adAccount]] = await Promise.all([
+    db
+      .select({ id: clients.id, balance_model: clients.balance_model })
+      .from(clients)
+      .where(eq(clients.id, client_id))
+      .limit(1),
+    db
+      .select({ id: ad_accounts.id, supplier_id: ad_accounts.supplier_id, status: ad_accounts.status })
+      .from(ad_accounts)
+      .where(and(eq(ad_accounts.id, ad_account_id), eq(ad_accounts.client_id, client_id)))
+      .limit(1),
+  ]);
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
-
-  // Verify ad account exists and belongs to client
-  const [adAccount] = await db
-    .select({ id: ad_accounts.id, supplier_id: ad_accounts.supplier_id, status: ad_accounts.status })
-    .from(ad_accounts)
-    .where(and(eq(ad_accounts.id, ad_account_id), eq(ad_accounts.client_id, client_id)))
-    .limit(1);
   if (!adAccount) return NextResponse.json({ error: "Ad account not found for this client" }, { status: 404 });
 
   if (adAccount.status === "disabled") {

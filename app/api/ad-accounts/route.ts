@@ -76,24 +76,24 @@ export async function POST(req: NextRequest) {
 
   const d = parsed.data;
 
-  // Fetch client and derive commission rate from platform fees
-  const [client] = await db
-    .select({ id: clients.id, client_platform_fees: clients.client_platform_fees })
-    .from(clients)
-    .where(eq(clients.id, d.client_id))
-    .limit(1);
+  // Fetch client + sub-account in parallel
+  const [[client], [subAccount]] = await Promise.all([
+    db
+      .select({ id: clients.id, client_platform_fees: clients.client_platform_fees })
+      .from(clients)
+      .where(eq(clients.id, d.client_id))
+      .limit(1),
+    db
+      .select({ id: supplier_sub_accounts.id, supplier_id: supplier_sub_accounts.supplier_id })
+      .from(supplier_sub_accounts)
+      .where(eq(supplier_sub_accounts.id, d.supplier_sub_account_id))
+      .limit(1),
+  ]);
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  if (!subAccount) return NextResponse.json({ error: "Supplier sub-account not found" }, { status: 404 });
 
   const platformFees = client.client_platform_fees as Record<string, number> | null;
   const top_up_fee_rate = platformFees?.[d.platform] ?? 0;
-
-  // Verify sub-account exists and derive supplier_id
-  const [subAccount] = await db
-    .select({ id: supplier_sub_accounts.id, supplier_id: supplier_sub_accounts.supplier_id })
-    .from(supplier_sub_accounts)
-    .where(eq(supplier_sub_accounts.id, d.supplier_sub_account_id))
-    .limit(1);
-  if (!subAccount) return NextResponse.json({ error: "Supplier sub-account not found" }, { status: 404 });
 
   const [newAccount] = await db
     .insert(ad_accounts)

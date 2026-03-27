@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, Plus, Trash2 } from "lucide-react";
 
 const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
@@ -23,7 +23,7 @@ const emptySubAccount = (): SubAccountDraft => ({ name: "", fees: emptyFees() })
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function AddSupplierModal() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export function AddSupplierModal() {
 
       setOpen(false);
       reset();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     } catch {
       setError("Network error");
     } finally {

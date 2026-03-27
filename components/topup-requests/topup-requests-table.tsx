@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ExecuteModal } from "./execute-modal";
 import { PlatformIcon } from "@/components/ui/platform-icon";
@@ -69,7 +69,7 @@ function formatDate(iso: string) {
 }
 
 export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideClientColumn }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [requests, setRequests] = useState(initialRequests);
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Sync with server data after background router.refresh()
+  // Sync with server data after React Query invalidation
   React.useEffect(() => {
     setRequests(initialRequests);
   }, [initialRequests]);
@@ -96,7 +96,9 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
 
   function handleExecuted(id: string) {
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "executed", executed_at: new Date().toISOString() } : r));
-    router.refresh();
+    queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
   }
 
   async function handleReject(id: string) {
@@ -109,7 +111,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
       });
       setRejectingId(null);
       setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" } : r));
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     } finally {
       setRejectLoading(false);
     }
@@ -123,7 +126,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
         setDeleteModalId(null);
         setDeleteConfirmText("");
         setRequests((prev) => prev.filter((r) => r.id !== id));
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["topup-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }
     } finally {
       setDeleteLoading(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, Pencil } from "lucide-react";
 
 interface Affiliate {
@@ -50,7 +50,7 @@ function buildPlatformFees(client: Client): PlatformFees {
 }
 
 export function EditClientModal({ client, affiliates }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +95,8 @@ export function EditClientModal({ client, affiliates }: Props) {
         return;
       }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients", client.id] });
     } catch {
       setError("Network error");
     } finally {

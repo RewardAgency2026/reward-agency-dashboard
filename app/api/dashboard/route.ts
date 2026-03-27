@@ -14,7 +14,7 @@ export async function GET() {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [
-    activeClients,
+    activeClientRows,
     pendingTopups,
     insufficientTopups,
     activeAdAccounts,
@@ -27,14 +27,14 @@ export async function GET() {
     platformVolume,
     recentTransactions,
   ] = await Promise.all([
-    // Active clients count
-    db.select({ count: sql<number>`COUNT(*)::int` }).from(clients).where(eq(clients.status, "active")),
+    // Active clients (used for count + wallet balance)
+    db.select({ id: clients.id, balance_model: clients.balance_model }).from(clients).where(eq(clients.status, "active")),
 
     // Pending top ups
     db.select({ count: sql<number>`COUNT(*)::int` }).from(topup_requests).where(eq(topup_requests.status, "pending")),
 
-    // Insufficient funds top ups
-    db.select({ count: sql<number>`COUNT(*)::int` }).from(topup_requests).where(eq(topup_requests.status, "insufficient_funds")),
+    // Insufficient funds top ups (pending with flag set)
+    db.select({ count: sql<number>`COUNT(*)::int` }).from(topup_requests).where(and(eq(topup_requests.status, "pending"), eq(topup_requests.insufficient_funds, true))),
 
     // Active ad accounts
     db.select({ count: sql<number>`COUNT(*)::int` }).from(ad_accounts).where(eq(ad_accounts.status, "active")),
@@ -100,11 +100,6 @@ export async function GET() {
   ]);
 
   // Compute total wallet balance across all active clients
-  const activeClientRows = await db
-    .select({ id: clients.id, balance_model: clients.balance_model })
-    .from(clients)
-    .where(eq(clients.status, "active"));
-
   const balanceMap = await calculateWalletBalances(activeClientRows.map((c) => c.id));
   const totalWalletBalance = activeClientRows.reduce((sum, c) => {
     return sum + balanceFromData(balanceMap.get(c.id), c.balance_model);
@@ -122,7 +117,7 @@ export async function GET() {
       monthly_commissions: monthlyCommissionAmount,
       monthly_provider_fees: monthlyProviderFeeAmount,
       gross_margin: grossMargin,
-      active_clients: activeClients[0]?.count ?? 0,
+      active_clients: activeClientRows.length,
       pending_topups: pendingTopups[0]?.count ?? 0,
       insufficient_topups: insufficientTopups[0]?.count ?? 0,
       active_ad_accounts: activeAdAccounts[0]?.count ?? 0,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { topup_requests, clients, ad_accounts, supplier_platform_fees, transactions, affiliates, affiliate_commissions } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
 import { logAudit } from "@/lib/audit";
@@ -41,28 +41,28 @@ export async function POST(
   if (request.status === "executed") return NextResponse.json({ error: "Already executed" }, { status: 409 });
   if (request.status === "rejected") return NextResponse.json({ error: "Request is rejected" }, { status: 409 });
 
-  // Fetch client for balance model + platform fees (source of truth for commission rate)
-  const [client] = await db
-    .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees, affiliate_id: clients.affiliate_id })
-    .from(clients)
-    .where(eq(clients.id, request.client_id))
-    .limit(1);
+  // Fetch client + ad account in parallel
+  const [[client], [adAccount]] = await Promise.all([
+    db
+      .select({ id: clients.id, name: clients.name, balance_model: clients.balance_model, client_platform_fees: clients.client_platform_fees, affiliate_id: clients.affiliate_id })
+      .from(clients)
+      .where(eq(clients.id, request.client_id))
+      .limit(1),
+    db
+      .select({
+        id: ad_accounts.id,
+        platform: ad_accounts.platform,
+        account_name: ad_accounts.account_name,
+        top_up_fee_rate: ad_accounts.top_up_fee_rate,
+        status: ad_accounts.status,
+        supplier_id: ad_accounts.supplier_id,
+        supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
+      })
+      .from(ad_accounts)
+      .where(eq(ad_accounts.id, request.ad_account_id))
+      .limit(1),
+  ]);
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
-
-  // Fetch ad account
-  const [adAccount] = await db
-    .select({
-      id: ad_accounts.id,
-      platform: ad_accounts.platform,
-      account_name: ad_accounts.account_name,
-      top_up_fee_rate: ad_accounts.top_up_fee_rate,
-      status: ad_accounts.status,
-      supplier_id: ad_accounts.supplier_id,
-      supplier_sub_account_id: ad_accounts.supplier_sub_account_id,
-    })
-    .from(ad_accounts)
-    .where(eq(ad_accounts.id, request.ad_account_id))
-    .limit(1);
   if (!adAccount) return NextResponse.json({ error: "Ad account not found" }, { status: 404 });
   if (adAccount.status === "disabled") {
     return NextResponse.json({ error: "This ad account is disabled and cannot receive top ups." }, { status: 400 });
@@ -158,11 +158,10 @@ export async function POST(
       const commRate = parseFloat(affiliate.commission_rate);
 
       // Count total clients referred by this affiliate
-      const affiliateClients = await db
-        .select({ id: clients.id })
+      const [{ count: clientsCount }] = await db
+        .select({ count: sql<number>`COUNT(*)::int` })
         .from(clients)
         .where(eq(clients.affiliate_id, affiliateId));
-      const clientsCount = affiliateClients.length;
 
       // Look for existing 'preview' record this month
       const [existingPreview] = await db

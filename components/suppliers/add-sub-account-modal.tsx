@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, Plus } from "lucide-react";
 
 const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function AddSubAccountModal({ supplierId }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function AddSubAccountModal({ supplierId }: Props) {
       if (!res.ok) { setError(data.error ?? "Failed to create sub-account"); return; }
       setOpen(false);
       reset();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     } catch {
       setError("Network error");
     } finally {

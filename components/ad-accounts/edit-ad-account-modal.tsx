@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function EditAdAccountModal({ adAccount, suppliers }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +101,7 @@ export function EditAdAccountModal({ adAccount, suppliers }: Props) {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Update failed"); return; }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["ad-accounts"] });
     } catch {
       setError("Network error");
     } finally {

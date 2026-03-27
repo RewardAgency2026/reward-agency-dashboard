@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, DollarSign } from "lucide-react";
 
 interface Props {
@@ -14,7 +14,7 @@ type Currency = "USD" | "USDT" | "USDC" | "EUR";
 const CRYPTO_CURRENCIES = new Set<Currency>(["USDT", "USDC"]);
 
 export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,8 @@ export function CreditModal({ clientId, cryptoFeeRate, canCredit }: Props) {
       setSuccess(`Wallet credited: ${net.toFixed(2)} ${currency}`);
       setTimeout(() => {
         handleClose();
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["clients"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }, 1200);
     } catch {
       setError("Network error");

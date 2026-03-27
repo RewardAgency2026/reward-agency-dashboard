@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -42,7 +42,7 @@ const DEFAULT_PLATFORM_FEES: PlatformFees = { meta: 0, google: 0, tiktok: 0, sna
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function AddClientModal({ affiliates, onSuccess }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +128,7 @@ export function AddClientModal({ affiliates, onSuccess }: Props) {
         created_at: c.created_at,
       });
       handleClose();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       if (data.emailSent) {
         toast.success(`Client ${c.client_code} created. Welcome email sent to ${c.email} ✓`);
       } else {

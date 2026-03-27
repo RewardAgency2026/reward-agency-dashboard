@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, Pencil } from "lucide-react";
 
 const PLATFORMS = ["meta", "google", "tiktok", "snapchat", "linkedin"] as const;
@@ -27,7 +27,7 @@ interface Props {
 const inputCls = "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(236,85%,55%)]";
 
 export function EditSubAccountModal({ supplierId, subAccountId, currentName, currentStatus, currentFees }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function EditSubAccountModal({ supplierId, subAccountId, currentName, cur
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Update failed"); return; }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     } catch {
       setError("Network error");
     } finally {
