@@ -60,7 +60,7 @@ export async function POST(
 
   const wallet_balance = await calculateWalletBalance(client.id, client.balance_model);
 
-  logAudit({
+  await logAudit({
     userId: session.user.id,
     userName: session.user.name ?? session.user.email ?? "Unknown",
     action: "balance_withdrawn",

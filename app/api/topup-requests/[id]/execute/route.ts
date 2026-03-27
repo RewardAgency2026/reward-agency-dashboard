@@ -101,7 +101,18 @@ export async function POST(
     return NextResponse.json({ error: "Insufficient funds", wallet_balance }, { status: 402 });
   }
 
-  // Transaction 1 — Top-up debit
+  // FIX C1/C2: Idempotency check — ensure no transaction already exists for this topup request
+  const [existingTxn] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(eq(transactions.topup_request_id, params.id))
+    .limit(1);
+
+  if (existingTxn) {
+    return NextResponse.json({ error: "This top up has already been executed" }, { status: 409 });
+  }
+
+  // Transaction 1 — Top-up debit (includes topup_request_id for idempotency)
   const [topupTxn] = await db
     .insert(transactions)
     .values({
@@ -117,6 +128,7 @@ export async function POST(
       top_up_fee_amount: String(top_up_fee_amount),
       description: `Top-up — ${adAccount.account_name}`,
       created_by: session.user.id,
+      topup_request_id: params.id,
     })
     .returning();
 
@@ -141,7 +153,7 @@ export async function POST(
     commissionTxn = row;
   }
 
-  // After commission transaction: auto-update affiliate commission preview record
+  // FIX C6: Atomic affiliate commission update — no read-compute-write race condition
   if (client.affiliate_id) {
     const affiliateId = client.affiliate_id;
     const now = new Date();
@@ -165,7 +177,7 @@ export async function POST(
 
       // Look for existing 'preview' record this month
       const [existingPreview] = await db
-        .select()
+        .select({ id: affiliate_commissions.id })
         .from(affiliate_commissions)
         .where(
           and(
@@ -177,18 +189,18 @@ export async function POST(
         )
         .limit(1);
 
+      const profitDelta = top_up_fee_amount - supplier_fee_amount;
+
       if (existingPreview) {
-        const newGross = parseFloat(existingPreview.total_commissions_gross) + top_up_fee_amount;
-        const newSupFees = parseFloat(existingPreview.total_supplier_fees) + supplier_fee_amount;
-        const newProfitNet = newGross - newSupFees;
-        const newCommAmount = newProfitNet * (commRate / 100);
+        // Atomic SQL increments — no read-compute-write, safe under concurrency
         await db
           .update(affiliate_commissions)
           .set({
-            total_commissions_gross: String(newGross),
-            total_supplier_fees: String(newSupFees),
-            total_profit_net: String(newProfitNet),
-            commission_amount: String(newCommAmount),
+            total_commissions_gross: sql`total_commissions_gross + ${top_up_fee_amount}`,
+            total_supplier_fees: sql`total_supplier_fees + ${supplier_fee_amount}`,
+            total_profit_net: sql`total_profit_net + ${profitDelta}`,
+            commission_amount: sql`(total_profit_net + ${profitDelta}) * ${commRate}::numeric / 100`,
+            total_topups: sql`total_topups + ${amount}`,
             clients_count: clientsCount,
           })
           .where(eq(affiliate_commissions.id, existingPreview.id));
@@ -201,7 +213,7 @@ export async function POST(
           period_year: currentYear,
           period_month: currentMonth,
           clients_count: clientsCount,
-          total_topups: "0",
+          total_topups: String(amount),
           total_commissions_gross: String(top_up_fee_amount),
           total_supplier_fees: String(supplier_fee_amount),
           total_crypto_fees: "0",
@@ -228,7 +240,8 @@ export async function POST(
 
   const new_wallet_balance = await calculateWalletBalance(request.client_id, client.balance_model);
 
-  logAudit({
+  // FIX C4: Awaited audit log — errors are caught and logged, never block the response
+  await logAudit({
     userId: session.user.id,
     userName: session.user.name ?? session.user.email ?? "Unknown",
     action: "topup_executed",

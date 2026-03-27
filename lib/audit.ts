@@ -21,10 +21,15 @@ export async function logAudit(params: {
   action: AuditAction;
   details: Record<string, unknown>;
 }) {
-  await db.insert(audit_logs).values({
-    user_id: params.userId,
-    user_name: params.userName,
-    action: params.action,
-    details: params.details,
-  }).catch(() => {}); // fire-and-forget, never block the main response
+  try {
+    await db.insert(audit_logs).values({
+      user_id: params.userId,
+      user_name: params.userName,
+      action: params.action,
+      details: params.details,
+    });
+  } catch (err) {
+    // Audit failure must never block financial operations, but we log it
+    console.error("[audit] Failed to write audit log:", err);
+  }
 }

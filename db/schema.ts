@@ -139,7 +139,12 @@ export const transactions = pgTable("transactions", {
   spend_date: date("spend_date"),
   created_by: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   created_at: timestamp("created_at").notNull().default(now()),
-});
+  // Idempotency key: one transaction per topup request (UNIQUE, NULLs allowed)
+  topup_request_id: uuid("topup_request_id").references(() => topup_requests.id, { onDelete: "set null" }),
+},
+(t) => ({
+  uniq_topup_request_txn: unique("uniq_topup_request_txn").on(t.topup_request_id),
+}));
 
 // ─── topup_requests ───────────────────────────────────────────────────────────
 export const topup_requests = pgTable("topup_requests", {

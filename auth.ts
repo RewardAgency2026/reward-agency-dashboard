@@ -86,6 +86,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = (user as { role?: string }).role ?? undefined;
         token.userType = (user as { userType?: string }).userType ?? "agency";
+        // FIX C9: Per-user-type JWT expiry — agency 8h, clients/affiliates 24h
+        const now = Math.floor(Date.now() / 1000);
+        token.exp = now + (token.userType === "agency" ? 8 * 60 * 60 : 24 * 60 * 60);
       }
       return token;
     },
@@ -103,5 +106,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24h ceiling; per-user-type expiry set in JWT callback
   },
 });

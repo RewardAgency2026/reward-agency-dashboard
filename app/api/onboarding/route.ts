@@ -8,6 +8,20 @@ import { generateClientCode } from "@/lib/client-code";
 import { logAudit } from "@/lib/audit";
 import { sendClientOnboardingWelcome } from "@/lib/email";
 
+// FIX C11: Simple in-memory IP rate limiter — max 5 requests per IP per 10 minutes
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const rateLimitMap = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (timestamps.length >= RATE_LIMIT_MAX) return true;
+  timestamps.push(now);
+  rateLimitMap.set(ip, timestamps);
+  return false;
+}
+
 const OnboardingSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -17,6 +31,12 @@ const OnboardingSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate limit by IP address
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = OnboardingSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });

@@ -203,6 +203,7 @@ To be added in Sprint 4.
 | Sprint 7 | ✅ Done | Affiliates CRUD, hybrid commission system (auto-preview on execute, finalize flow), mark-paid, public onboarding page, client login, email notifications (Resend + console fallback), 14 tests |
 | Sprint 8 | ✅ Done | Client portal (dashboard, accounts, transactions, top-ups, 5 secure API routes, 20 tests) |
 | Forgot/Reset Password | ✅ Done | Forgot password flow (email link), reset page, admin client reset, password_reset_tokens table |
+| Arch Fixes | ✅ Done | Atomic commission updates, idempotency (topup_request_id), pinned NextAuth, awaited audit logs, fee types, JWT expiry, onboarding rate limit, daily backup cron |
 | Sprint 9 | 🔄 Next | P&L + Invoices |
 | Sprint 10 | ⏳ | Affiliate portal (commissions, referral link, client list) |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
@@ -363,3 +364,11 @@ reward-agency-dashboard/
 - **Email notifications** — `lib/email.ts` uses Resend if `RESEND_API_KEY` is set; falls back to `console.log` if not. Add `RESEND_API_KEY=` and `NEXT_PUBLIC_APP_URL=http://localhost:3000` to `.env.local`
 - **Public routes** — `/onboarding` is fully public (no auth required). Middleware allows it without login. API `/api/onboarding` also has no auth check
 - **Client login** — clients can log in via `/login` using email + password set during onboarding (password stored in `clients.password_hash`)
+- **NextAuth version is pinned** — `"next-auth": "5.0.0-beta.30"` (no `^` prefix). Do NOT add the caret back; beta releases have breaking changes between minor versions
+- **Audit logs are awaited** — `await logAudit(...)` in all routes; errors are caught inside `logAudit` with `console.error` and never propagate to the caller. The `.catch(() => {})` anti-pattern has been removed
+- **Affiliate commission updates are atomic** — the `existingPreview` UPDATE uses SQL increment expressions (`sql\`col + ${delta}\``) so concurrent executions cannot lose data. Never revert to read-compute-write
+- **Idempotency on topup execute** — `transactions.topup_request_id` (uuid, nullable, UNIQUE partial index on non-NULL values) ties each topup transaction to its request. Execute route checks for existing transaction before INSERT and returns 409 if found. DB constraint is the ultimate safety net
+- **JWT expiry is per user type** — agency: 8 hours, clients/affiliates: 24 hours. Set via `token.exp` in JWT callback on login. Global `maxAge: 24h` is the ceiling
+- **Onboarding rate limiting** — `POST /api/onboarding` is rate-limited at 5 requests per IP per 10 minutes using an in-memory Map. No Redis needed at this scale
+- **Daily backup cron** — `GET /api/cron/daily-backup` runs at 06:00 UTC via Vercel cron (configured in `vercel.json`). Secured by `Authorization: Bearer <CRON_SECRET>` header. Sends 3 CSV attachments (transactions, client balances, top-ups) to `BACKUP_EMAIL` via Resend. Set `BACKUP_EMAIL` and `CRON_SECRET` in `.env.local` and Vercel env vars
+- **Fee confidentiality types** — `lib/types.ts` exports `ClientSafeTransaction` (Omit of 4 fee fields) and `toClientSafeTransaction()` transformer. Portal routes already use explicit column selection; use the transformer if ever switching to `SELECT *`
