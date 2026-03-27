@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
       amount: topup_requests.amount,
       currency: topup_requests.currency,
       status: topup_requests.status,
+      insufficient_funds: topup_requests.insufficient_funds,
       notes: topup_requests.notes,
       created_at: topup_requests.created_at,
       ad_account_name: ad_accounts.account_name,
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
   const walletBalance = await calculateWalletBalance(clientId, client.balance_model);
-  const status = walletBalance >= amount ? "approved" : "insufficient_funds";
+  const insufficient_funds = walletBalance < amount;
 
   const [newRequest] = await db
     .insert(topup_requests)
@@ -97,7 +98,8 @@ export async function POST(req: NextRequest) {
       supplier_id: adAccount.supplier_id,
       amount: String(amount),
       currency,
-      status,
+      status: "pending",
+      insufficient_funds,
       notes: notes ?? null,
     })
     .returning();

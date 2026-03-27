@@ -11,6 +11,7 @@ interface TopupRow {
   amount: string;
   currency: string;
   status: string;
+  insufficient_funds: boolean;
   notes: string | null;
   created_at: string;
   ad_account_name: string | null;
@@ -32,27 +33,26 @@ interface DashboardData {
 const STATUS_TABS = [
   { value: "", label: "All" },
   { value: "pending", label: "Pending" },
-  { value: "approved", label: "Approved" },
   { value: "insufficient_funds", label: "Insufficient Funds" },
   { value: "executed", label: "Executed" },
   { value: "rejected", label: "Rejected" },
 ] as const;
 
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border border-amber-200",
-  approved: "bg-blue-50 text-blue-700 border border-blue-200",
-  insufficient_funds: "bg-red-50 text-red-600 border border-red-200",
-  executed: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  rejected: "bg-gray-100 text-gray-500",
-};
+function getStatusBadge(status: string, insufficientFunds: boolean): string {
+  if (status === "pending" && insufficientFunds) return "bg-red-50 text-red-600 border border-red-200";
+  if (status === "pending") return "bg-amber-50 text-amber-700 border border-amber-200";
+  if (status === "executed") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  if (status === "rejected") return "bg-gray-100 text-gray-500";
+  return "bg-gray-100 text-gray-500";
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  insufficient_funds: "Insufficient Funds",
-  executed: "Executed",
-  rejected: "Rejected",
-};
+function getStatusLabel(status: string, insufficientFunds: boolean): string {
+  if (status === "pending" && insufficientFunds) return "Insufficient Funds";
+  if (status === "pending") return "Pending";
+  if (status === "executed") return "Executed";
+  if (status === "rejected") return "Rejected";
+  return status;
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -70,10 +70,15 @@ export function PortalTopups() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: topups = [], isLoading } = useQuery<TopupRow[]>({
-    queryKey: ["portal-topups", statusFilter],
-    queryFn: () => fetch(`/api/portal/topup-requests${statusFilter ? `?status=${statusFilter}` : ""}`).then((r) => r.json()),
+  // "insufficient_funds" is not a real status — fetch pending and filter client-side
+  const apiStatusFilter = statusFilter === "insufficient_funds" ? "pending" : statusFilter;
+  const { data: topupsRaw = [], isLoading } = useQuery<TopupRow[]>({
+    queryKey: ["portal-topups", apiStatusFilter],
+    queryFn: () => fetch(`/api/portal/topup-requests${apiStatusFilter ? `?status=${apiStatusFilter}` : ""}`).then((r) => r.json()),
   });
+  const topups = statusFilter === "insufficient_funds"
+    ? topupsRaw.filter((t) => t.insufficient_funds)
+    : topupsRaw;
 
   const { data: accounts = [] } = useQuery<AdAccountOption[]>({
     queryKey: ["portal-accounts"],
@@ -328,8 +333,8 @@ export function PortalTopups() {
                     <span className="ml-1 text-xs text-gray-400">{t.currency}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE[t.status] ?? "bg-gray-100 text-gray-500")}>
-                      {STATUS_LABELS[t.status] ?? t.status}
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", getStatusBadge(t.status, t.insufficient_funds))}>
+                      {getStatusLabel(t.status, t.insufficient_funds)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{t.notes ?? "—"}</td>

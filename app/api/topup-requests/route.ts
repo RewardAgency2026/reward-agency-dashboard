@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       amount: topup_requests.amount,
       currency: topup_requests.currency,
       status: topup_requests.status,
+      insufficient_funds: topup_requests.insufficient_funds,
       notes: topup_requests.notes,
       executed_by: topup_requests.executed_by,
       executed_at: topup_requests.executed_at,
@@ -123,9 +124,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This ad account has been deleted and cannot receive top ups." }, { status: 400 });
   }
 
-  // Calculate wallet balance to auto-set status
+  // Calculate wallet balance to determine insufficient_funds flag
   const wallet_balance = await calculateWalletBalance(client_id, client.balance_model);
-  const status = wallet_balance >= amount ? "approved" : "insufficient_funds";
+  const insufficient_funds = wallet_balance < amount;
 
   const [newRequest] = await db
     .insert(topup_requests)
@@ -135,7 +136,8 @@ export async function POST(req: NextRequest) {
       supplier_id: adAccount.supplier_id,
       amount: String(amount),
       currency,
-      status,
+      status: "pending",
+      insufficient_funds,
       notes: notes ?? null,
     })
     .returning();

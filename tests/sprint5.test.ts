@@ -32,7 +32,7 @@ let supplierId = "";
 let subAccountId = "";
 let adAccountId = "";
 let adAccountPoorId = "";
-let requestApprovedId = "";
+let requestPendingId = "";
 let requestInsufficientId = "";
 
 async function setupAuth() {
@@ -173,7 +173,7 @@ after(async () => {
 
 // ── Create requests ────────────────────────────────────────────────────────────
 describe("POST /api/topup-requests — create", () => {
-  it("creates request with status 'approved' when wallet is sufficient", async () => {
+  it("creates request with status 'pending' and insufficient_funds=false when wallet is sufficient", async () => {
     const { status, data } = await api("POST", "/api/topup-requests", {
       client_id: richClientId,
       ad_account_id: adAccountId,
@@ -181,13 +181,14 @@ describe("POST /api/topup-requests — create", () => {
       currency: "USD",
     });
     assert.equal(status, 201, JSON.stringify(data));
-    assert.equal(data.status, "approved");
+    assert.equal(data.status, "pending");
+    assert.equal(data.insufficient_funds, false);
     assert.equal(parseFloat(data.amount), 100);
     assert.ok(data.wallet_balance >= 100, "wallet_balance should be >= 100");
-    requestApprovedId = data.id;
+    requestPendingId = data.id;
   });
 
-  it("creates request with status 'insufficient_funds' when wallet is insufficient", async () => {
+  it("creates request with status 'pending' and insufficient_funds=true when wallet is insufficient", async () => {
     const { status, data } = await api("POST", "/api/topup-requests", {
       client_id: poorClientId,
       ad_account_id: adAccountPoorId,
@@ -195,7 +196,8 @@ describe("POST /api/topup-requests — create", () => {
       currency: "USD",
     });
     assert.equal(status, 201, JSON.stringify(data));
-    assert.equal(data.status, "insufficient_funds");
+    assert.equal(data.status, "pending");
+    assert.equal(data.insufficient_funds, true);
     requestInsufficientId = data.id;
   });
 
@@ -225,27 +227,29 @@ describe("GET /api/topup-requests — list and filter", () => {
     const { status, data } = await api("GET", "/api/topup-requests");
     assert.equal(status, 200);
     assert.ok(Array.isArray(data));
-    const found = data.find((r: { id: string }) => r.id === requestApprovedId);
-    assert.ok(found, "approved request not in list");
+    const found = data.find((r: { id: string }) => r.id === requestPendingId);
+    assert.ok(found, "pending request not in list");
     assert.ok("client_name" in found);
     assert.ok("ad_account_platform" in found);
     assert.ok("supplier_name" in found);
     assert.ok("wallet_balance" in found);
+    assert.ok("insufficient_funds" in found);
   });
 
-  it("filters by status=approved", async () => {
-    const { status, data } = await api("GET", "/api/topup-requests?status=approved");
+  it("filters by status=pending returns all pending requests", async () => {
+    const { status, data } = await api("GET", "/api/topup-requests?status=pending");
     assert.equal(status, 200);
-    assert.ok(data.every((r: { status: string }) => r.status === "approved"), "all results should be approved");
-    const found = data.find((r: { id: string }) => r.id === requestApprovedId);
-    assert.ok(found, "approved request not found in filtered list");
+    assert.ok(data.every((r: { status: string }) => r.status === "pending"), "all results should be pending");
+    const found = data.find((r: { id: string }) => r.id === requestPendingId);
+    assert.ok(found, "pending request not found in filtered list");
   });
 
-  it("filters by status=insufficient_funds", async () => {
-    const { status, data } = await api("GET", "/api/topup-requests?status=insufficient_funds");
+  it("pending request with insufficient_funds=true is in pending filter", async () => {
+    const { status, data } = await api("GET", "/api/topup-requests?status=pending");
     assert.equal(status, 200);
     const found = data.find((r: { id: string }) => r.id === requestInsufficientId);
-    assert.ok(found, "insufficient_funds request not found");
+    assert.ok(found, "insufficient_funds request not found in pending filter");
+    assert.equal(found.insufficient_funds, true);
   });
 
   it("filters by client_id", async () => {
@@ -258,12 +262,13 @@ describe("GET /api/topup-requests — list and filter", () => {
 // ── Single request ─────────────────────────────────────────────────────────────
 describe("GET /api/topup-requests/[id]", () => {
   it("returns single request with all fields", async () => {
-    const { status, data } = await api("GET", `/api/topup-requests/${requestApprovedId}`);
+    const { status, data } = await api("GET", `/api/topup-requests/${requestPendingId}`);
     assert.equal(status, 200);
-    assert.equal(data.id, requestApprovedId);
+    assert.equal(data.id, requestPendingId);
     assert.ok("wallet_balance" in data);
     assert.ok("supplier_fee_rate" in data);
     assert.ok("top_up_fee_rate" in data);
+    assert.ok("insufficient_funds" in data);
   });
 
   it("returns 404 for unknown ID", async () => {
@@ -275,7 +280,7 @@ describe("GET /api/topup-requests/[id]", () => {
 // ── Execute ────────────────────────────────────────────────────────────────────
 describe("POST /api/topup-requests/[id]/execute", () => {
   it("executes request: creates topup + commission_fee transactions with correct amounts", async () => {
-    const { status, data } = await api("POST", `/api/topup-requests/${requestApprovedId}/execute`, {});
+    const { status, data } = await api("POST", `/api/topup-requests/${requestPendingId}/execute`, {});
     assert.equal(status, 200, JSON.stringify(data));
 
     // Request updated to executed
@@ -314,7 +319,7 @@ describe("POST /api/topup-requests/[id]/execute", () => {
   });
 
   it("fails with 409 if already executed", async () => {
-    const { status } = await api("POST", `/api/topup-requests/${requestApprovedId}/execute`, {});
+    const { status } = await api("POST", `/api/topup-requests/${requestPendingId}/execute`, {});
     assert.equal(status, 409);
   });
 });
@@ -335,7 +340,7 @@ describe("POST /api/topup-requests/[id]/reject", () => {
   });
 
   it("fails with 409 if already executed", async () => {
-    const { status } = await api("POST", `/api/topup-requests/${requestApprovedId}/reject`, {});
+    const { status } = await api("POST", `/api/topup-requests/${requestPendingId}/reject`, {});
     assert.equal(status, 409);
   });
 });

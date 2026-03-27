@@ -93,7 +93,8 @@ All financial movements. **Wallet balance is always computed from this table.**
 ### `topup_requests`
 Client requests to top up an ad account.
 - `id` uuid PK, `client_id`, `ad_account_id`, `supplier_id`, `amount`, `currency`
-- `status` (pending|approved|insufficient_funds|executed|rejected)
+- `status` (pending|executed|rejected) — always created as `pending`
+- `insufficient_funds` boolean default false — set true at creation if wallet < amount; never blocks creation
 - `notes`, `executed_by` FK → users, `executed_at`
 
 ### `invoices`

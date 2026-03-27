@@ -153,7 +153,8 @@ export const topup_requests = pgTable("topup_requests", {
   supplier_id: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("USD"),
-  status: text("status").notNull().default("pending"), // pending|approved|insufficient_funds|executed|rejected
+  status: text("status").notNull().default("pending"), // pending|executed|rejected
+  insufficient_funds: boolean("insufficient_funds").notNull().default(false),
   notes: text("notes"),
   executed_by: uuid("executed_by").references(() => users.id, { onDelete: "set null" }),
   executed_at: timestamp("executed_at"),

@@ -22,6 +22,7 @@ export async function GET(
       amount: topup_requests.amount,
       currency: topup_requests.currency,
       status: topup_requests.status,
+      insufficient_funds: topup_requests.insufficient_funds,
       notes: topup_requests.notes,
       executed_by: topup_requests.executed_by,
       executed_at: topup_requests.executed_at,

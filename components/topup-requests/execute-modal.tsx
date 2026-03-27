@@ -17,6 +17,7 @@ interface TopupRequest {
   supplier_fee_rate: string | null;
   wallet_balance: number;
   status: string;
+  insufficient_funds: boolean;
 }
 
 interface Props {
@@ -35,7 +36,7 @@ export function ExecuteModal({ request, onSuccess }: Props) {
   const supplierFeeAmount = amount * (supplierFeeRate / 100);
   const topUpFeeAmount = amount * (topUpFeeRate / 100);
   const balanceAfter = request.wallet_balance - amount - topUpFeeAmount;
-  const isForce = request.status === "insufficient_funds";
+  const isForce = request.insufficient_funds;
   const insufficient = request.wallet_balance < amount + topUpFeeAmount;
 
   function handleClose() {
@@ -146,7 +147,7 @@ export function ExecuteModal({ request, onSuccess }: Props) {
 
             {isForce && (
               <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
-                Warning: wallet balance is insufficient. This execution will result in a negative balance.
+                ⚠ This client has insufficient funds. Make sure balance is credited before executing.
               </div>
             )}
 

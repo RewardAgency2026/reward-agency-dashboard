@@ -293,7 +293,8 @@ describe("POST /api/portal/topup-requests", () => {
     });
     assert.equal(status, 201, JSON.stringify(data));
     assert.ok(data.id, "should return id");
-    assert.equal(data.status, "approved", "should be approved (sufficient funds)");
+    assert.equal(data.status, "pending", "should be pending");
+    assert.equal(data.insufficient_funds, false, "should have insufficient_funds=false (sufficient funds)");
     assert.ok(!("supplier_fee_amount" in data), "should not expose supplier_fee_amount");
   });
 
@@ -304,7 +305,8 @@ describe("POST /api/portal/topup-requests", () => {
       currency: "USD",
     });
     assert.equal(status, 201, JSON.stringify(data));
-    assert.equal(data.status, "insufficient_funds");
+    assert.equal(data.status, "pending");
+    assert.equal(data.insufficient_funds, true, "should have insufficient_funds=true");
   });
 
   it("returns 404 if client tries to use another client's ad account", async () => {
@@ -346,10 +348,10 @@ describe("GET /api/portal/topup-requests", () => {
   });
 
   it("supports status filter", async () => {
-    const { data } = await api("GET", "/api/portal/topup-requests?status=approved");
+    const { data } = await api("GET", "/api/portal/topup-requests?status=pending");
     assert.ok(Array.isArray(data));
     for (const req of data) {
-      assert.equal(req.status, "approved");
+      assert.equal(req.status, "pending");
     }
   });
 

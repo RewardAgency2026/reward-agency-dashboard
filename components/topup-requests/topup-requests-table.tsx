@@ -14,6 +14,7 @@ export interface TopupRequestRow {
   amount: string;
   currency: string;
   status: string;
+  insufficient_funds: boolean;
   notes: string | null;
   executed_by: string | null;
   executed_at: string | null;
@@ -40,27 +41,27 @@ interface Props {
 const STATUS_TABS = [
   { value: "", label: "All" },
   { value: "pending", label: "Pending" },
-  { value: "approved", label: "Approved" },
   { value: "insufficient_funds", label: "Insufficient Funds" },
   { value: "executed", label: "Executed" },
   { value: "rejected", label: "Rejected" },
 ] as const;
 
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border border-amber-200",
-  approved: "bg-blue-50 text-blue-700 border border-blue-200",
-  insufficient_funds: "bg-red-50 text-red-600 border border-red-200",
-  executed: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  rejected: "bg-gray-100 text-gray-500",
-};
+// Badge and label helpers operate on the composite (status + insufficient_funds) key
+function getStatusBadge(status: string, insufficientFunds: boolean): string {
+  if (status === "pending" && insufficientFunds) return "bg-red-50 text-red-600 border border-red-200";
+  if (status === "pending") return "bg-amber-50 text-amber-700 border border-amber-200";
+  if (status === "executed") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  if (status === "rejected") return "bg-gray-100 text-gray-500";
+  return "bg-gray-100 text-gray-500";
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  insufficient_funds: "Insufficient Funds",
-  executed: "Executed",
-  rejected: "Rejected",
-};
+function getStatusLabel(status: string, insufficientFunds: boolean): string {
+  if (status === "pending" && insufficientFunds) return "Insufficient Funds";
+  if (status === "pending") return "Pending";
+  if (status === "executed") return "Executed";
+  if (status === "rejected") return "Rejected";
+  return status;
+}
 
 
 function formatDate(iso: string) {
@@ -84,10 +85,14 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
     setRequests(initialRequests);
   }, [initialRequests]);
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const insufficientCount = requests.filter((r) => r.status === "insufficient_funds").length;
+  const pendingCount = requests.filter((r) => r.status === "pending" && !r.insufficient_funds).length;
+  const insufficientCount = requests.filter((r) => r.status === "pending" && r.insufficient_funds).length;
 
-  const filtered = statusFilter ? requests.filter((r) => r.status === statusFilter) : requests;
+  const filtered = statusFilter === "insufficient_funds"
+    ? requests.filter((r) => r.status === "pending" && r.insufficient_funds)
+    : statusFilter
+    ? requests.filter((r) => r.status === statusFilter)
+    : requests;
 
   function handleExecuted(id: string) {
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "executed", executed_at: new Date().toISOString() } : r));
@@ -156,8 +161,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
-                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE[deleteTarget.status] ?? "bg-gray-100 text-gray-500")}>
-                    {STATUS_LABELS[deleteTarget.status] ?? deleteTarget.status}
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", getStatusBadge(deleteTarget.status, deleteTarget.insufficient_funds))}>
+                    {getStatusLabel(deleteTarget.status, deleteTarget.insufficient_funds)}
                   </span>
                 </div>
               </div>
@@ -255,7 +260,7 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((r) => {
-                const canAct = isAdmin && ["pending", "approved", "insufficient_funds"].includes(r.status);
+                const canAct = isAdmin && r.status === "pending";
                 return (
                   <tr key={r.id} className="hover:bg-gray-50/50">
                     {!hideClientColumn && (
@@ -289,8 +294,8 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                       <p className="text-xs text-gray-400">{r.currency}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE[r.status] ?? "bg-gray-100 text-gray-500")}>
-                        {STATUS_LABELS[r.status] ?? r.status}
+                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", getStatusBadge(r.status, r.insufficient_funds))}>
+                        {getStatusLabel(r.status, r.insufficient_funds)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">{formatDate(r.created_at)}</td>
