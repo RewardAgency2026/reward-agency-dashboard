@@ -151,12 +151,16 @@ Single-row agency configuration.
 
 8. **Setup rental** — `has_setup=true` clients have monthly fee + cost tracked; reflected in P&L (Sprint 8)
 
-9. **Hybrid affiliate commission flow** — commission records follow the lifecycle: `preview` → `calculated` → `paid`
+9. **Automatic affiliate commission flow** — commission records follow the lifecycle: `preview` → `pending_approval` → `approved` → `paid`
    - Each top-up execution auto-creates or increments the current month's `preview` record for the client's affiliate
-   - Only `preview` records are modified by top-up execution; `calculated` and `paid` records are immutable
-   - Admin explicitly finalizes a `preview` record (PATCH `/api/affiliate-commissions/[id]/finalize`) to freeze it as `calculated`
-   - After finalize, new top-ups for the same month create a fresh `preview` record
-   - `calculated` records can be marked as `paid` (PATCH `/api/affiliate-commissions/[id]/mark-paid`); `preview` records cannot
+   - Only `preview` records are modified by top-up execution; all other statuses are immutable
+   - On the 1st of each month, a cron job (`/api/cron/finalize-commissions`) automatically moves all previous-month `preview` records with `commission_amount > 0` to `pending_approval` and emails all admins
+   - Admin approves via POST `/api/affiliate-commissions/[id]/approve` or rejects (DELETE same route, sends back to `preview`)
+   - POST `/api/affiliate-commissions/approve-all` bulk-approves all `pending_approval` records
+   - Only `approved` records can be marked as paid (PATCH `/api/affiliate-commissions/[id]/mark-paid`)
+   - Unique constraint on `(affiliate_id, period_year, period_month)` — enforces exactly one row per affiliate per month
+   - Daily reminder cron (`/api/cron/commission-reminders`) emails admins if any `pending_approval` records are unreviewed; urgent variant after 7 days
+   - The old finalize route (`PATCH /api/affiliate-commissions/[id]/finalize`) returns 410 Gone (retired)
 
 ---
 
@@ -208,7 +212,8 @@ To be added in Sprint 4.
 | Arch Fixes | ✅ Done | Atomic commission updates, idempotency (topup_request_id), pinned NextAuth, awaited audit logs, fee types, JWT expiry, onboarding rate limit, daily backup cron |
 | Prod Readiness | ✅ Done | router.refresh() after mutations, write-through cached_balance, supplier_id removed from topup_requests, service layer (wallet/topup/commission), reconcile endpoint, all 106 tests pass |
 | Sprint 9 | ✅ Done | Affiliate portal (dashboard, clients, commissions, referral link, profile, 5 API routes, 18 tests) |
-| Sprint 10 | 🔄 Next | P&L + Invoices |
+| Sprint 10 — Commissions | ✅ Done | Automatic commission workflow (preview→pending_approval→approved→paid), cron jobs, approve/reject/approve-all/mark-paid APIs, agency sidebar badge, affiliate portal status updates, 22 tests |
+| Sprint 10 — P&L | 🔄 Next | P&L Report + Invoices |
 | Sprint 11 | ⏳ | Settings + Vercel deploy |
 
 ---

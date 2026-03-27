@@ -42,6 +42,7 @@ interface DashboardData {
   active_clients: number;
   current_month_commission: number;
   total_paid: number;
+  pending_payment: number;
   monthly_chart: { period_year: number; period_month: number; commission_amount: number; status: string }[];
   recent_clients: { id: string; client_code: string; name: string; company: string; status: string; created_at: string }[];
 }
@@ -71,9 +72,9 @@ export default function AffiliateDashboardPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <KpiCard label="Total Clients Referred" value={String(data?.total_clients ?? 0)} />
@@ -83,6 +84,12 @@ export default function AffiliateDashboardPage() {
               value={`$${fmt(data?.current_month_commission ?? 0)}`}
               sub="In progress"
               color="text-blue-600"
+            />
+            <KpiCard
+              label="Pending Payment"
+              value={`$${fmt(data?.pending_payment ?? 0)}`}
+              sub="Approved — awaiting transfer"
+              color={(data?.pending_payment ?? 0) > 0 ? "text-amber-600" : "text-gray-400"}
             />
             <KpiCard
               label="Total Commissions Paid"

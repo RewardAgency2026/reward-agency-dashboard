@@ -1,33 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { db } from "@/db";
-import { affiliate_commissions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
-export async function PATCH(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const [existing] = await db
-    .select()
-    .from(affiliate_commissions)
-    .where(eq(affiliate_commissions.id, params.id))
-    .limit(1);
-
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (existing.status !== "preview") {
-    return NextResponse.json({ error: "Can only finalize preview records" }, { status: 400 });
-  }
-
-  const [updated] = await db
-    .update(affiliate_commissions)
-    .set({ status: "calculated", calculated_at: new Date() })
-    .where(eq(affiliate_commissions.id, params.id))
-    .returning();
-
-  return NextResponse.json(updated);
+/** Finalization is now automatic (cron on 1st of month). This endpoint is retired. */
+export async function PATCH() {
+  return NextResponse.json(
+    { error: "Manual finalization has been removed. Commissions are finalized automatically by cron on the 1st of each month." },
+    { status: 410 }
+  );
 }

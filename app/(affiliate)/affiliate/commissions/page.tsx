@@ -17,10 +17,20 @@ function formatPeriod(year: number, month: number) {
   return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; badge: string; amountColor: string }> = {
+const STATUS_CONFIG: Record<string, { label: string; badge: string; amountColor: string; message?: string }> = {
   preview: { label: "In Progress", badge: "bg-blue-50 text-blue-700 border border-blue-200", amountColor: "text-blue-600" },
-  calculated: { label: "Finalized", badge: "bg-amber-50 text-amber-700 border border-amber-200", amountColor: "text-amber-700" },
-  paid: { label: "Paid ✓", badge: "bg-emerald-50 text-emerald-700 border border-emerald-200", amountColor: "text-emerald-600" },
+  pending_approval: {
+    label: "Pending Approval",
+    badge: "bg-amber-50 text-amber-700 border border-amber-200",
+    amountColor: "text-amber-700",
+    message: "Your commission is being reviewed. You'll receive an email when it's approved.",
+  },
+  approved: {
+    label: "Approved — Awaiting Payment",
+    badge: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    amountColor: "text-emerald-600",
+  },
+  paid: { label: "Paid ✓", badge: "bg-gray-100 text-gray-600 border border-gray-200", amountColor: "text-gray-700" },
 };
 
 interface Commission {
@@ -117,7 +127,7 @@ export default function AffiliateCommissionsPage() {
     .reduce((s, c) => s + parseFloat(c.commission_amount), 0);
 
   const pending = commissions
-    .filter((c) => c.status === "calculated" || c.status === "preview")
+    .filter((c) => c.status === "preview" || c.status === "pending_approval" || c.status === "approved")
     .reduce((s, c) => s + parseFloat(c.commission_amount), 0);
 
   const now = new Date();
@@ -200,6 +210,9 @@ export default function AffiliateCommissionsPage() {
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cfg.badge}`}>
                           {cfg.label}
                         </span>
+                        {cfg.message && (
+                          <p className="mt-1 text-xs text-amber-600 max-w-xs">{cfg.message}</p>
+                        )}
                       </td>
                       <td className={`px-5 py-3 text-right font-mono font-semibold ${cfg.amountColor}`}>
                         ${fmt(parseFloat(c.commission_amount))}

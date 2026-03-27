@@ -19,6 +19,7 @@ export async function GET() {
     activeClientsRows,
     currentCommissionRows,
     totalPaidRows,
+    pendingPaymentRows,
     chartRows,
     recentClientRows,
   ] = await Promise.all([
@@ -56,6 +57,16 @@ export async function GET() {
       ),
 
     db
+      .select({ total: sql<string>`COALESCE(SUM(commission_amount::numeric), 0)::text` })
+      .from(affiliate_commissions)
+      .where(
+        and(
+          eq(affiliate_commissions.affiliate_id, affiliateId),
+          eq(affiliate_commissions.status, "approved")
+        )
+      ),
+
+    db
       .select({
         period_year: affiliate_commissions.period_year,
         period_month: affiliate_commissions.period_month,
@@ -88,6 +99,7 @@ export async function GET() {
       active_clients: activeClientsRows[0]?.count ?? 0,
       current_month_commission: parseFloat(currentCommissionRows[0]?.commission_amount ?? "0"),
       total_paid: parseFloat(totalPaidRows[0]?.total ?? "0"),
+      pending_payment: parseFloat(pendingPaymentRows[0]?.total ?? "0"),
       monthly_chart: chartRows
         .reverse()
         .map((r) => ({

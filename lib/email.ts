@@ -247,6 +247,194 @@ export async function sendPasswordReset(params: {
   }
 }
 
+// ─── sendCommissionReviewRequired ────────────────────────────────────────────
+
+export async function sendCommissionReviewRequired(params: {
+  to: string[];
+  monthLabel: string;
+  pendingCount: number;
+  items: { name: string; amount: string }[];
+}): Promise<EmailResult> {
+  const { to, monthLabel, pendingCount, items } = params;
+
+  const listRows = items
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:6px 12px;font-size:14px;color:#111827;">${item.name}</td>
+          <td style="padding:6px 12px;font-size:14px;color:#111827;text-align:right;font-family:monospace;">$${item.amount}</td>
+        </tr>`
+    )
+    .join("");
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Action Required — Affiliate Commissions to Review</h2>
+    <p style="margin:0 0 20px;font-size:15px;color:#6b7280;">
+      <strong style="color:#111827;">${pendingCount} affiliate commission${pendingCount !== 1 ? "s" : ""}</strong>
+      for <strong style="color:#111827;">${monthLabel}</strong> are pending your approval.
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#f9fafb;">
+          <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Affiliate</th>
+          <th style="padding:8px 12px;text-align:right;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Commission</th>
+        </tr>
+      </thead>
+      <tbody>${listRows}</tbody>
+    </table>
+
+    ${ctaButton("Review Commissions", `${APP_URL}/affiliates`)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">
+      Daily reminders will be sent until all commissions are approved.
+    </p>
+  `;
+
+  if (!resend) {
+    console.log("[email] sendCommissionReviewRequired →", to, { monthLabel, pendingCount });
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `Action Required — ${pendingCount} Affiliate Commission${pendingCount !== 1 ? "s" : ""} to Review for ${monthLabel}`,
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendCommissionReviewRequired failed:", message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── sendCommissionReminder ───────────────────────────────────────────────────
+
+export async function sendCommissionReminder(params: {
+  to: string[];
+  pendingCount: number;
+  maxDaysPending: number;
+  items: { name: string; amount: string; daysPending: number }[];
+}): Promise<EmailResult> {
+  const { to, pendingCount, maxDaysPending, items } = params;
+  const isUrgent = maxDaysPending >= 7;
+
+  const listRows = items
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:6px 12px;font-size:14px;color:#111827;">${item.name}</td>
+          <td style="padding:6px 12px;font-size:14px;color:#111827;text-align:right;font-family:monospace;">$${item.amount}</td>
+          <td style="padding:6px 12px;font-size:14px;color:${item.daysPending >= 7 ? "#dc2626" : "#6b7280"};text-align:right;">${item.daysPending}d</td>
+        </tr>`
+    )
+    .join("");
+
+  const subject = isUrgent
+    ? `⚠️ URGENT — Affiliate Commissions Overdue (${maxDaysPending} days)`
+    : `Reminder — ${pendingCount} Affiliate Commission${pendingCount !== 1 ? "s" : ""} Awaiting Approval (${maxDaysPending} days)`;
+
+  const urgentBanner = isUrgent
+    ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+         <p style="margin:0;font-size:14px;font-weight:600;color:#dc2626;">
+           ⚠️ URGENT: ${pendingCount} commission${pendingCount !== 1 ? "s" : ""} ${pendingCount !== 1 ? "have" : "has"} been waiting
+           ${maxDaysPending} days. This is delaying affiliate payments.
+         </p>
+       </div>`
+    : "";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">
+      ${isUrgent ? "⚠️ URGENT — " : ""}Affiliate Commissions Awaiting Approval
+    </h2>
+    <p style="margin:0 0 20px;font-size:15px;color:#6b7280;">
+      You have <strong style="color:#111827;">${pendingCount} affiliate commission${pendingCount !== 1 ? "s" : ""}</strong> pending approval.
+    </p>
+
+    ${urgentBanner}
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#f9fafb;">
+          <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Affiliate</th>
+          <th style="padding:8px 12px;text-align:right;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Commission</th>
+          <th style="padding:8px 12px;text-align:right;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Days Pending</th>
+        </tr>
+      </thead>
+      <tbody>${listRows}</tbody>
+    </table>
+
+    ${ctaButton("Review Now", `${APP_URL}/affiliates`)}
+  `;
+
+  if (!resend) {
+    console.log("[email] sendCommissionReminder →", to, { pendingCount, maxDaysPending });
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  try {
+    await resend.emails.send({ from: FROM, to, subject, html: emailWrapper(body) });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendCommissionReminder failed:", message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── sendCommissionPaid ───────────────────────────────────────────────────────
+
+export async function sendCommissionPaid(params: {
+  to: string;
+  affiliateName: string;
+  monthLabel: string;
+  amount: string;
+  reference: string | null;
+}): Promise<EmailResult> {
+  const { to, affiliateName, monthLabel, amount, reference } = params;
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Your commission has been paid</h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">
+      Hi ${affiliateName}, your commission for <strong style="color:#111827;">${monthLabel}</strong> has been paid.
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+      <tbody>
+        ${credentialRow("Period", monthLabel)}
+        ${credentialRow("Amount", `$${amount}`)}
+        ${credentialRow("Reference", reference ?? "N/A")}
+      </tbody>
+    </table>
+
+    ${ctaButton("View My Commissions", `${APP_URL}/affiliate/commissions`)}
+
+    <p style="margin:0;font-size:13px;color:#9ca3af;">Thank you for your partnership with Reward Agency.</p>
+  `;
+
+  if (!resend) {
+    console.log("[email] sendCommissionPaid →", to, { monthLabel, amount, reference });
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `Your commission for ${monthLabel} has been paid`,
+      html: emailWrapper(body),
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendCommissionPaid failed:", message);
+    return { success: false, error: message };
+  }
+}
+
 // ─── sendClientOnboardingWelcome (alias for sendClientWelcome) ────────────────
 
 export async function sendClientOnboardingWelcome(params: {

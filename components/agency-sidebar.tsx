@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "P&L Report", href: "/pnl", icon: BarChart2 },
-  { label: "Affiliates", href: "/affiliates", icon: Network },
+  { label: "Affiliates", href: "/affiliates", icon: Network, badge: "commissions" },
   { label: "Settings", href: "/settings", icon: Settings },
 ] as const;
 
@@ -49,21 +49,29 @@ export function AgencySidebar({ userName, userRole }: Props) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [topupCount, setTopupCount] = useState(0);
+  const [commissionCount, setCommissionCount] = useState(0);
 
   useEffect(() => {
-    async function fetchCount() {
+    async function fetchCounts() {
       try {
-        const res = await fetch("/api/topup-requests/count");
-        if (res.ok) {
-          const { count } = await res.json();
+        const [topupRes, commRes] = await Promise.all([
+          fetch("/api/topup-requests/count"),
+          fetch("/api/affiliate-commissions/pending-count"),
+        ]);
+        if (topupRes.ok) {
+          const { count } = await topupRes.json();
           setTopupCount(count ?? 0);
+        }
+        if (commRes.ok) {
+          const { count } = await commRes.json();
+          setCommissionCount(count ?? 0);
         }
       } catch {
         // silently ignore
       }
     }
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
   }, [pathname]); // re-fetch on every navigation
 
@@ -104,9 +112,14 @@ export function AgencySidebar({ userName, userRole }: Props) {
                 >
                   <Icon size={16} className="shrink-0" />
                   <span className="flex-1 truncate">{label}</span>
-                  {hasBadge && topupCount > 0 && (
+                  {hasBadge && "badge" in rest && rest.badge === true && topupCount > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
                       {topupCount}
+                    </span>
+                  )}
+                  {hasBadge && "badge" in rest && rest.badge === "commissions" && commissionCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                      {commissionCount}
                     </span>
                   )}
                 </Link>
