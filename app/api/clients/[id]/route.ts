@@ -67,7 +67,7 @@ export async function GET(
 
   const wallet_balance = await calculateWalletBalance(client.id, client.balance_model);
 
-  // Recent transactions — never expose supplier/topup fee columns
+  // All transactions — never expose supplier/topup fee columns
   const recentTxns = await db
     .select({
       id: transactions.id,
@@ -83,8 +83,7 @@ export async function GET(
     .from(transactions)
     .leftJoin(users, eq(transactions.created_by, users.id))
     .where(eq(transactions.client_id, params.id))
-    .orderBy(desc(transactions.created_at))
-    .limit(10);
+    .orderBy(desc(transactions.created_at));
 
   // Ad accounts list
   const adAccountsList = await db

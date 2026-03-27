@@ -159,6 +159,68 @@ function formatAmount(txn: Transaction) {
   return `${isCredit ? "+" : "−"}${val.toFixed(2)}`;
 }
 
+const PAGE_SIZE = 50;
+
+function TransactionsTab({ transactions }: { transactions: Transaction[] }) {
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const shown = transactions.slice(0, visible);
+  const hasMore = visible < transactions.length;
+
+  return (
+    <div>
+      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+        {transactions.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No transactions yet.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {["Type", "Amount", "Currency", "Date", "Description"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {shown.map((t) => (
+                <tr key={t.id} className="hover:bg-gray-50/50">
+                  <td className="px-4 py-3">
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TXN_TYPE_BADGE[t.type] ?? "bg-gray-100 text-gray-600")}>
+                      {TXN_TYPE_LABEL[t.type] ?? t.type}
+                    </span>
+                  </td>
+                  <td className={cn("px-4 py-3 font-mono font-medium", TXN_AMOUNT_COLOR[t.type] ?? "text-gray-700")}>
+                    {formatAmount(t)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{t.currency}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {t.spend_date ? formatDate(t.spend_date) : formatDate(t.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">{t.description ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {transactions.length > 0 && (
+        <div className="mt-3 flex items-center justify-between px-1">
+          <p className="text-xs text-gray-400">
+            Showing {shown.length} of {transactions.length} transaction{transactions.length !== 1 ? "s" : ""}
+          </p>
+          {hasMore && (
+            <button
+              onClick={() => setVisible((v) => v + PAGE_SIZE)}
+              className="text-xs font-medium text-[hsl(236,85%,55%)] hover:underline"
+            >
+              Load more
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ClientTabs({ client, affiliates, suppliers, canCredit, isAdmin, topupRequests }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]>("Overview");
   const [showResetPwd, setShowResetPwd] = useState(false);
@@ -473,40 +535,7 @@ export function ClientTabs({ client, affiliates, suppliers, canCredit, isAdmin, 
 
       {/* Transactions */}
       {tab === "Transactions" && (
-        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-          {client.transactions.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No transactions yet.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Type", "Amount", "Currency", "Date", "Description"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {client.transactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TXN_TYPE_BADGE[t.type] ?? "bg-gray-100 text-gray-600")}>
-                        {TXN_TYPE_LABEL[t.type] ?? t.type}
-                      </span>
-                    </td>
-                    <td className={cn("px-4 py-3 font-mono font-medium", TXN_AMOUNT_COLOR[t.type] ?? "text-gray-700")}>
-                      {formatAmount(t)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{t.currency}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {t.spend_date ? formatDate(t.spend_date) : formatDate(t.created_at)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{t.description ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <TransactionsTab transactions={client.transactions} />
       )}
 
       {tab === "Top Ups" && (
