@@ -110,6 +110,11 @@ interface SupplierTxnRow {
   ad_account_platform: string | null;
   client_name: string | null;
   client_code: string | null;
+  payment_method: string | null;
+  reference: string | null;
+  bank_fees: string | null;
+  bank_fees_note: string | null;
+  status: string | null;
 }
 
 type TxnPreset = "today" | "7d" | "30d" | "custom";
@@ -125,6 +130,7 @@ function daysAgoStr(n: number) {
 }
 
 const TXN_LABEL: Record<string, string> = {
+  supplier_payment: "Payment Sent",
   topup: "Top Up",
   ad_account_withdrawal: "Withdrawal",
   supplier_fee_refund: "Provider Fee Refund",
@@ -132,6 +138,7 @@ const TXN_LABEL: Record<string, string> = {
 };
 
 const TXN_BADGE: Record<string, string> = {
+  supplier_payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   topup: "bg-blue-50 text-blue-700 border border-blue-200",
   ad_account_withdrawal: "bg-orange-50 text-orange-700 border border-orange-200",
   supplier_fee_refund: "bg-orange-50 text-orange-700 border border-orange-200",
@@ -141,7 +148,7 @@ const TXN_BADGE: Record<string, string> = {
 function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string, to: string) {
   const safeName = supplierName.replace(/\s+/g, "_").toLowerCase();
   const filename = `supplier_${safeName}_transactions_${from}_${to}.csv`;
-  const header = "Date,Type,Client Code,Client Name,Ad Account,Platform,Amount,Currency,Description";
+  const header = "Date,Type,Client Code,Client Name,Ad Account,Platform,Amount,Currency,Method,Reference,Bank Fees,Description";
   const lines = rows.map((r) => [
     new Date(r.created_at).toLocaleDateString("en-GB"),
     TXN_LABEL[r.type] ?? r.type,
@@ -151,6 +158,9 @@ function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string,
     r.ad_account_platform ?? "",
     parseFloat(r.amount).toFixed(2),
     r.currency,
+    r.payment_method ?? "",
+    r.reference ?? "",
+    r.bank_fees ? parseFloat(r.bank_fees).toFixed(2) : "",
     (r.description ?? "").replace(/,/g, " "),
   ].join(","));
   const csv = [header, ...lines].join("\n");
@@ -256,7 +266,7 @@ function SupplierTransactionsTab({ supplierId, supplierName }: { supplierId: str
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {["Date", "Type", "Client", "Ad Account", "Amount"].map((h) => (
+                {["Date", "Type", "Client / Method", "Ad Account / Bank Fees", "Amount"].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -273,17 +283,40 @@ function SupplierTransactionsTab({ supplierId, supplierName }: { supplierId: str
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{r.client_name ?? "—"}</p>
-                    {r.client_code && <p className="text-xs font-mono text-gray-400">{r.client_code}</p>}
+                    {r.type === "supplier_payment" ? (
+                      <div>
+                        <p className="text-gray-700">{r.payment_method ?? "—"}</p>
+                        {r.reference && <p className="text-xs font-mono text-gray-400">Ref: {r.reference}</p>}
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-medium text-gray-900">{r.client_name ?? "—"}</p>
+                        {r.client_code && <p className="text-xs font-mono text-gray-400">{r.client_code}</p>}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={14} />}
-                      <span className="text-gray-700">{r.ad_account_name ?? "—"}</span>
-                    </div>
+                    {r.type === "supplier_payment" ? (
+                      r.bank_fees ? (
+                        <div>
+                          <p className="text-xs text-gray-500">Bank fees</p>
+                          <p className="font-mono text-xs text-gray-700">{parseFloat(r.bank_fees).toFixed(2)} {r.currency}</p>
+                          {r.bank_fees_note && <p className="text-xs text-gray-400">{r.bank_fees_note}</p>}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={14} />}
+                        <span className="text-gray-700">{r.ad_account_name ?? "—"}</span>
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900 whitespace-nowrap">
-                    {parseFloat(r.amount).toFixed(2)} {r.currency}
+                  <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
+                    <span className={r.type === "supplier_payment" ? "text-emerald-700" : "text-gray-900"}>
+                      {parseFloat(r.amount).toFixed(2)} {r.currency}
+                    </span>
                   </td>
                 </tr>
               ))}
