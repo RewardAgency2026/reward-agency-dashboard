@@ -29,7 +29,7 @@ export async function GET(
     .limit(1);
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [subAccountRows, adAccountRows, payments, paymentSumRows, topupSumRows, withdrawalSumRows, feeRefundSumRows] = await Promise.all([
+  const [subAccountRows, adAccountRows, payments, paymentSumRows, topupSumRows, topupFeesSumRows, withdrawalSumRows, feeRefundSumRows] = await Promise.all([
     db.select().from(supplier_sub_accounts).where(eq(supplier_sub_accounts.supplier_id, params.id)),
 
     db
@@ -62,6 +62,16 @@ export async function GET(
 
     db
       .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(and(
+        eq(transactions.type, "topup"),
+        eq(ad_accounts.supplier_id, params.id)
+      )),
+
+    // Supplier fees paid on each topup (separate from topup amount)
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${transactions.supplier_fee_amount}), 0)` })
       .from(transactions)
       .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
       .where(and(
@@ -117,6 +127,7 @@ export async function GET(
 
   const totalPayments = parseFloat(paymentSumRows[0]?.total ?? "0");
   const totalTopups = parseFloat(topupSumRows[0]?.total ?? "0");
+  const totalTopupFees = parseFloat(topupFeesSumRows[0]?.total ?? "0");
   const totalWithdrawals = parseFloat(withdrawalSumRows[0]?.total ?? "0");
   const totalFeeRefunds = parseFloat(feeRefundSumRows[0]?.total ?? "0");
 
@@ -128,7 +139,7 @@ export async function GET(
     kpis: {
       total_payments_sent: totalPayments,
       total_topups: totalTopups,
-      remaining_balance: totalPayments - totalTopups + totalWithdrawals + totalFeeRefunds,
+      remaining_balance: totalPayments - totalTopups - totalTopupFees + totalWithdrawals + totalFeeRefunds,
       total_ad_accounts: adAccountRows.length,
       total_sub_accounts: subAccountRows.length,
     },

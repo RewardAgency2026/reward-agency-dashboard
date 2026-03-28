@@ -108,8 +108,10 @@ interface SupplierTxnRow {
   created_at: string;
   ad_account_name: string | null;
   ad_account_platform: string | null;
+  sub_account_name: string | null;
   client_name: string | null;
   client_code: string | null;
+  supplier_fee_amount: string | null;
   payment_method: string | null;
   reference: string | null;
   bank_fees: string | null;
@@ -148,16 +150,18 @@ const TXN_BADGE: Record<string, string> = {
 function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string, to: string) {
   const safeName = supplierName.replace(/\s+/g, "_").toLowerCase();
   const filename = `supplier_${safeName}_transactions_${from}_${to}.csv`;
-  const header = "Date,Type,Client Code,Client Name,Ad Account,Platform,Amount,Currency,Method,Reference,Bank Fees,Description";
+  const header = "Date,Type,Client Code,Client Name,Ad Account,Sub-Account,Platform,Amount,Currency,Provider Fee,Method,Reference,Bank Fees,Description";
   const lines = rows.map((r) => [
     new Date(r.created_at).toLocaleDateString("en-GB"),
     TXN_LABEL[r.type] ?? r.type,
     r.client_code ?? "",
     r.client_name ?? "",
     r.ad_account_name ?? "",
+    r.sub_account_name ?? "",
     r.ad_account_platform ?? "",
     parseFloat(r.amount).toFixed(2),
     r.currency,
+    r.supplier_fee_amount ? parseFloat(r.supplier_fee_amount).toFixed(2) : "",
     r.payment_method ?? "",
     r.reference ?? "",
     r.bank_fees ? parseFloat(r.bank_fees).toFixed(2) : "",
@@ -309,7 +313,12 @@ function SupplierTransactionsTab({ supplierId, supplierName }: { supplierId: str
                     ) : (
                       <div className="flex items-center gap-1.5">
                         {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={14} />}
-                        <span className="text-gray-700">{r.ad_account_name ?? "—"}</span>
+                        <div>
+                          <p className="text-gray-700">{r.ad_account_name ?? "—"}</p>
+                          {r.sub_account_name && (
+                            <p className="text-xs text-gray-400">{r.sub_account_name}</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </td>

@@ -17,6 +17,7 @@ export interface WithdrawalRow {
   ad_account_name: string | null;
   ad_account_platform: string | null;
   supplier_name: string | null;
+  affiliate_name: string | null;
 }
 
 export interface TopupRequestRow {
@@ -305,7 +306,9 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                         </td>
                       )}
                       {!hideClientColumn && (
-                        <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {w.affiliate_name ?? <span className="text-gray-400">—</span>}
+                        </td>
                       )}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { transactions, ad_accounts, clients, supplier_payments } from "@/db/schema";
+import { transactions, ad_accounts, clients, supplier_payments, supplier_sub_accounts } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 export async function GET(
@@ -21,7 +21,7 @@ export async function GET(
   const fromIso = from ? new Date(from + "T00:00:00.000Z").toISOString() : null;
   const toIso = to ? new Date(to + "T23:59:59.999Z").toISOString() : null;
 
-  // Get all ad account IDs for this supplier (needed for transaction query)
+  // Get all ad account IDs for this supplier
   const supplierAdAccounts = await db
     .select({ id: ad_accounts.id })
     .from(ad_accounts)
@@ -30,6 +30,7 @@ export async function GET(
   const adAccountIds = supplierAdAccounts.map((a) => a.id);
 
   // Query A: transactions linked to this supplier's ad accounts
+  // Only supplier-side flows: topup, ad_account_withdrawal, supplier_fee_refund
   const txnRows = adAccountIds.length > 0
     ? await db
         .select({
@@ -39,17 +40,21 @@ export async function GET(
           currency: transactions.currency,
           description: transactions.description,
           created_at: transactions.created_at,
+          supplier_fee_amount: transactions.supplier_fee_amount,
+          supplier_fee_rate_snapshot: transactions.supplier_fee_rate_snapshot,
           ad_account_name: ad_accounts.account_name,
           ad_account_platform: ad_accounts.platform,
           client_name: clients.name,
           client_code: clients.client_code,
+          sub_account_name: supplier_sub_accounts.name,
         })
         .from(transactions)
         .leftJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
         .leftJoin(clients, eq(transactions.client_id, clients.id))
+        .leftJoin(supplier_sub_accounts, eq(ad_accounts.supplier_sub_account_id, supplier_sub_accounts.id))
         .where(and(
           inArray(transactions.ad_account_id, adAccountIds),
-          sql`${transactions.type} IN ('topup', 'ad_account_withdrawal', 'supplier_fee_refund', 'commission_fee')`,
+          sql`${transactions.type} IN ('topup', 'ad_account_withdrawal', 'supplier_fee_refund')`,
           ...(fromIso ? [sql`${transactions.created_at} >= ${fromIso}`] : []),
           ...(toIso ? [sql`${transactions.created_at} <= ${toIso}`] : []),
         ))
@@ -75,7 +80,6 @@ export async function GET(
     .from(supplier_payments)
     .where(and(...paymentConditions));
 
-  // Unified row type
   type UnifiedRow = {
     id: string;
     type: string;
@@ -85,8 +89,10 @@ export async function GET(
     created_at: string;
     ad_account_name: string | null;
     ad_account_platform: string | null;
+    sub_account_name: string | null;
     client_name: string | null;
     client_code: string | null;
+    supplier_fee_amount: string | null;
     payment_method: string | null;
     reference: string | null;
     bank_fees: string | null;
@@ -95,23 +101,32 @@ export async function GET(
   };
 
   const unified: UnifiedRow[] = [
-    ...txnRows.map((r) => ({
-      id: r.id,
-      type: r.type,
-      amount: r.amount,
-      currency: r.currency,
-      description: r.description,
-      created_at: r.created_at.toISOString(),
-      ad_account_name: r.ad_account_name,
-      ad_account_platform: r.ad_account_platform,
-      client_name: r.client_name,
-      client_code: r.client_code,
-      payment_method: null,
-      reference: null,
-      bank_fees: null,
-      bank_fees_note: null,
-      status: null,
-    })),
+    ...txnRows.map((r) => {
+      // Build enriched description with sub-account and fee rate
+      const feeRate = parseFloat(r.supplier_fee_rate_snapshot ?? "0");
+      const subPart = r.sub_account_name ? ` (${r.sub_account_name}${feeRate > 0 ? ` · ${feeRate}%` : ""})` : "";
+      const enrichedDesc = r.ad_account_name ? `${r.ad_account_name}${subPart}` : (r.description ?? null);
+
+      return {
+        id: r.id,
+        type: r.type,
+        amount: r.amount,
+        currency: r.currency,
+        description: enrichedDesc,
+        created_at: r.created_at.toISOString(),
+        ad_account_name: r.ad_account_name,
+        ad_account_platform: r.ad_account_platform,
+        sub_account_name: r.sub_account_name,
+        client_name: r.client_name,
+        client_code: r.client_code,
+        supplier_fee_amount: r.supplier_fee_amount,
+        payment_method: null,
+        reference: null,
+        bank_fees: null,
+        bank_fees_note: null,
+        status: null,
+      };
+    }),
     ...paymentRows.map((p) => ({
       id: p.id,
       type: "supplier_payment",
@@ -124,8 +139,10 @@ export async function GET(
       created_at: p.created_at.toISOString(),
       ad_account_name: null,
       ad_account_platform: null,
+      sub_account_name: null,
       client_name: null,
       client_code: null,
+      supplier_fee_amount: null,
       payment_method: p.payment_method,
       reference: p.reference,
       bank_fees: parseFloat(p.bank_fees) > 0 ? p.bank_fees : null,
@@ -134,7 +151,6 @@ export async function GET(
     })),
   ];
 
-  // Sort combined list by date DESC
   unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return NextResponse.json(unified);
