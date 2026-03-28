@@ -321,7 +321,11 @@ export function TopupRequestsTable({ requests: initialRequests, isAdmin, hideCli
                         <p className="font-mono font-medium text-gray-900">{parseFloat(w.amount).toFixed(2)}</p>
                         <p className="text-xs text-gray-400">{w.currency}</p>
                       </td>
-                      <td className="px-4 py-3 text-gray-400">—</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Executed
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
                           Withdrawal

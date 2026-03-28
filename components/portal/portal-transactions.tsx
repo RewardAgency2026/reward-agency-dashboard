@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PlatformIcon } from "@/components/ui/platform-icon";
+import { TXN_LABEL, TXN_BADGE, TXN_CREDIT_TYPES } from "@/lib/transaction-labels";
 
 interface TransactionRow {
   id: string;
@@ -20,36 +21,18 @@ const TYPE_TABS = [
   { value: "", label: "All" },
   { value: "payment", label: "Credit Client Wallet" },
   { value: "topup", label: "Top Up" },
-  { value: "commission_fee", label: "Commission" },
-  { value: "withdraw", label: "Withdraw" },
+  { value: "commission_fee", label: "Client Commission Fee" },
+  { value: "withdraw", label: "Client Wallet Withdrawal" },
   { value: "refund", label: "Refund" },
-  { value: "ad_account_withdrawal", label: "Ad Account Withdrawal" },
-  { value: "commission_refund", label: "Fee Refund" },
+  { value: "ad_account_withdrawal", label: "Withdrawal" },
+  { value: "commission_refund", label: "Commission Refund" },
 ] as const;
 
-const TYPE_BADGE: Record<string, string> = {
-  payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  topup: "bg-blue-50 text-blue-700 border border-blue-200",
-  commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
-  withdraw: "bg-red-50 text-red-600 border border-red-200",
-  refund: "bg-red-50 text-red-600 border border-red-200",
-  spend_record: "bg-gray-100 text-gray-500 border border-gray-200",
-  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-};
+const TYPE_BADGE = TXN_BADGE;
 
-const TYPE_LABELS: Record<string, string> = {
-  payment: "Credit Client Wallet",
-  topup: "Top Up",
-  commission_fee: "Commission",
-  withdraw: "Withdrawal",
-  refund: "Refund",
-  spend_record: "Spend Record",
-  ad_account_withdrawal: "Ad Account Withdrawal",
-  commission_refund: "Fee Refund",
-};
+const TYPE_LABELS = TXN_LABEL;
 
-const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund"]);
+const CREDIT_TYPES = TXN_CREDIT_TYPES;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {

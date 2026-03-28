@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { PlatformIcon } from "@/components/ui/platform-icon";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -74,7 +74,7 @@ interface Props {
   isAdmin: boolean;
 }
 
-const TABS = ["Sub-Accounts", "Ad Accounts", "Payments"] as const;
+const TABS = ["Sub-Accounts", "Ad Accounts", "Payments", "Transactions"] as const;
 
 const PLATFORM_LABELS: Record<string, string> = {
   meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat", linkedin: "LinkedIn",
@@ -97,6 +97,203 @@ function formatDate(iso: string) {
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+interface SupplierTxnRow {
+  id: string;
+  type: string;
+  amount: string;
+  currency: string;
+  description: string | null;
+  created_at: string;
+  ad_account_name: string | null;
+  ad_account_platform: string | null;
+  client_name: string | null;
+  client_code: string | null;
+}
+
+type TxnPreset = "today" | "7d" | "30d" | "custom";
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function daysAgoStr(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split("T")[0];
+}
+
+const TXN_LABEL: Record<string, string> = {
+  topup: "Top Up",
+  ad_account_withdrawal: "Withdrawal",
+  supplier_fee_refund: "Provider Fee Refund",
+  commission_fee: "Client Commission Fee",
+};
+
+const TXN_BADGE: Record<string, string> = {
+  topup: "bg-blue-50 text-blue-700 border border-blue-200",
+  ad_account_withdrawal: "bg-orange-50 text-orange-700 border border-orange-200",
+  supplier_fee_refund: "bg-orange-50 text-orange-700 border border-orange-200",
+  commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
+};
+
+function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string, to: string) {
+  const safeName = supplierName.replace(/\s+/g, "_").toLowerCase();
+  const filename = `supplier_${safeName}_transactions_${from}_${to}.csv`;
+  const header = "Date,Type,Client Code,Client Name,Ad Account,Platform,Amount,Currency,Description";
+  const lines = rows.map((r) => [
+    new Date(r.created_at).toLocaleDateString("en-GB"),
+    TXN_LABEL[r.type] ?? r.type,
+    r.client_code ?? "",
+    r.client_name ?? "",
+    r.ad_account_name ?? "",
+    r.ad_account_platform ?? "",
+    parseFloat(r.amount).toFixed(2),
+    r.currency,
+    (r.description ?? "").replace(/,/g, " "),
+  ].join(","));
+  const csv = [header, ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function SupplierTransactionsTab({ supplierId, supplierName }: { supplierId: string; supplierName: string }) {
+  const [preset, setPreset] = useState<TxnPreset>("30d");
+  const [customFrom, setCustomFrom] = useState(daysAgoStr(30));
+  const [customTo, setCustomTo] = useState(todayStr());
+
+  const from = preset === "today" ? todayStr()
+    : preset === "7d" ? daysAgoStr(7)
+    : preset === "30d" ? daysAgoStr(30)
+    : customFrom;
+
+  const to = preset === "custom" ? customTo : todayStr();
+
+  const { data: rows = [], isLoading } = useQuery<SupplierTxnRow[]>({
+    queryKey: ["supplier-transactions", supplierId, from, to],
+    queryFn: () =>
+      fetch(`/api/suppliers/${supplierId}/transactions?from=${from}&to=${to}`).then((r) => r.json()),
+    staleTime: 60000,
+  });
+
+  const PRESETS: { value: TxnPreset; label: string }[] = [
+    { value: "today", label: "Today" },
+    { value: "7d", label: "Last 7 Days" },
+    { value: "30d", label: "Last 30 Days" },
+    { value: "custom", label: "Custom" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Date selector */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden">
+          {PRESETS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPreset(p.value)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium transition-colors",
+                preset === p.value
+                  ? "bg-[hsl(236,85%,55%)] text-white"
+                  : "text-gray-600 hover:bg-gray-50"
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="rounded-md border border-gray-200 px-2 py-1 text-xs"
+            />
+            <span className="text-gray-400 text-xs">to</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="rounded-md border border-gray-200 px-2 py-1 text-xs"
+            />
+          </div>
+        )}
+        <div className="ml-auto">
+          <button
+            onClick={() => downloadCsv(rows, supplierName, from, to)}
+            disabled={rows.length === 0}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+        {isLoading ? (
+          <div className="divide-y divide-gray-100">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-4 py-3 animate-pulse flex gap-4">
+                <div className="h-4 bg-gray-100 rounded w-20" />
+                <div className="h-4 bg-gray-100 rounded w-16" />
+                <div className="h-4 bg-gray-100 rounded w-32" />
+                <div className="h-4 bg-gray-100 rounded w-20 ml-auto" />
+              </div>
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-10">No transactions in this period.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {["Date", "Type", "Client", "Ad Account", "Amount"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50/50">
+                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                    {new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TXN_BADGE[r.type] ?? "bg-gray-100 text-gray-600")}>
+                      {TXN_LABEL[r.type] ?? r.type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-900">{r.client_name ?? "—"}</p>
+                    {r.client_code && <p className="text-xs font-mono text-gray-400">{r.client_code}</p>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      {r.ad_account_platform && <PlatformIcon platform={r.ad_account_platform} size={14} />}
+                      <span className="text-gray-700">{r.ad_account_name ?? "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-mono font-medium text-gray-900 whitespace-nowrap">
+                    {parseFloat(r.amount).toFixed(2)} {r.currency}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 px-1">Showing {rows.length} transaction{rows.length !== 1 ? "s" : ""}</p>
+    </div>
+  );
 }
 
 export function SupplierTabs({ supplier, isAdmin }: Props) {
@@ -317,6 +514,11 @@ export function SupplierTabs({ supplier, isAdmin }: Props) {
             )}
           </div>
         </div>
+      )}
+
+      {/* Transactions */}
+      {tab === "Transactions" && (
+        <SupplierTransactionsTab supplierId={supplier.id} supplierName={supplier.name} />
       )}
     </div>
   );

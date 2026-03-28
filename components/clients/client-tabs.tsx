@@ -10,6 +10,7 @@ import { CreditModal } from "./credit-modal";
 import { WithdrawModal } from "./withdraw-modal";
 import { AddAdAccountModal } from "@/components/ad-accounts/add-ad-account-modal";
 import { type TopupRequestRow } from "@/components/topup-requests/topup-requests-table";
+import { TXN_LABEL, TXN_BADGE, TXN_AMOUNT_CLASS, TXN_CREDIT_TYPES } from "@/lib/transaction-labels";
 
 interface Affiliate {
   id: string;
@@ -95,42 +96,13 @@ interface Props {
 const TABS = ["Overview", "Ad Accounts", "Transactions", "Top Ups"] as const;
 
 // payment → green (+), topup/withdraw/refund/spend_record → deduction colors
-const TXN_TYPE_BADGE: Record<string, string> = {
-  payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  topup: "bg-blue-50 text-blue-700 border border-blue-200",
-  commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
-  withdraw: "bg-orange-50 text-orange-700 border border-orange-200",
-  refund: "bg-red-50 text-red-700 border border-red-200",
-  spend_record: "bg-gray-100 text-gray-600",
-  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  supplier_fee_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-};
+const TXN_TYPE_BADGE = TXN_BADGE;
 
-const TXN_TYPE_LABEL: Record<string, string> = {
-  payment: "Credit Client Wallet",
-  topup: "Top Up",
-  commission_fee: "Client Commission Fee",
-  withdraw: "Withdraw",
-  refund: "Refund",
-  spend_record: "Spend Record",
-  ad_account_withdrawal: "Ad Account Withdrawal",
-  commission_refund: "Commission Refund",
-  supplier_fee_refund: "Provider Fee Refund",
-};
+const TXN_TYPE_LABEL = TXN_LABEL;
 
-const TXN_AMOUNT_COLOR: Record<string, string> = {
-  payment: "text-emerald-600",
-  topup: "text-blue-600",
-  withdraw: "text-orange-600",
-  refund: "text-red-600",
-  spend_record: "text-gray-500",
-  ad_account_withdrawal: "text-emerald-600",
-  commission_refund: "text-emerald-600",
-  supplier_fee_refund: "text-emerald-600",
-};
+const TXN_AMOUNT_COLOR = TXN_AMOUNT_CLASS;
 
-const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund", "supplier_fee_refund"]);
+const CREDIT_TYPES = TXN_CREDIT_TYPES;
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border border-emerald-200",

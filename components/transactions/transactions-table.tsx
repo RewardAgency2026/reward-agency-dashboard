@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { PlatformIcon } from "@/components/ui/platform-icon";
+import { TXN_LABEL, TXN_BADGE, TXN_CREDIT_TYPES } from "@/lib/transaction-labels";
 
 export interface TransactionRow {
   id: string;
@@ -41,39 +42,19 @@ const TYPE_TABS = [
   { value: "payment", label: "Credit Client Wallet" },
   { value: "topup", label: "Top Up" },
   { value: "commission_fee", label: "Client Commission Fee" },
-  { value: "withdraw", label: "Withdraw" },
-  { value: "refund", label: "Refund" },
-  { value: "spend_record", label: "Spend Record" },
-  { value: "ad_account_withdrawal", label: "Ad Account Withdrawal" },
+  { value: "ad_account_withdrawal", label: "Withdrawal" },
   { value: "commission_refund", label: "Commission Refund" },
   { value: "supplier_fee_refund", label: "Provider Fee Refund" },
+  { value: "withdraw", label: "Client Wallet Withdrawal" },
+  { value: "refund", label: "Refund" },
+  { value: "spend_record", label: "Spend Record" },
 ] as const;
 
-const TYPE_BADGE: Record<string, string> = {
-  payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  topup: "bg-blue-50 text-blue-700 border border-blue-200",
-  commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
-  withdraw: "bg-orange-50 text-orange-700 border border-orange-200",
-  refund: "bg-red-50 text-red-700 border border-red-200",
-  spend_record: "bg-gray-100 text-gray-600",
-  ad_account_withdrawal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  commission_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  supplier_fee_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-};
+const TYPE_BADGE = TXN_BADGE;
 
-const TYPE_LABELS: Record<string, string> = {
-  payment: "Credit Client Wallet",
-  topup: "Top Up",
-  commission_fee: "Client Commission Fee",
-  withdraw: "Withdraw",
-  refund: "Refund",
-  spend_record: "Spend Record",
-  ad_account_withdrawal: "Ad Account Withdrawal",
-  commission_refund: "Commission Refund",
-  supplier_fee_refund: "Provider Fee Refund",
-};
+const TYPE_LABELS = TXN_LABEL;
 
-const CREDIT_TYPES = new Set(["payment", "ad_account_withdrawal", "commission_refund", "supplier_fee_refund"]);
+const CREDIT_TYPES = TXN_CREDIT_TYPES;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });

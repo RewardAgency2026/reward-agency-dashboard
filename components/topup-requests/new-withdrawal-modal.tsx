@@ -88,6 +88,8 @@ export function NewWithdrawalModal({ adAccounts, onClose }: Props) {
                 <span className="col-span-2 border-t border-emerald-200 my-1" />
                 <span className="font-medium text-gray-700">Total Credited to Wallet</span>
                 <span className="font-mono font-semibold text-right text-emerald-700">+${result.total_credited_to_client.toFixed(2)}</span>
+                <span className="text-gray-500">Current Balance</span>
+                <span className="font-mono text-right text-gray-500">${(result.new_wallet_balance - result.total_credited_to_client).toFixed(2)}</span>
                 <span className="text-gray-500">New Balance After</span>
                 <span className="font-mono font-semibold text-right">${result.new_wallet_balance.toFixed(2)}</span>
               </div>

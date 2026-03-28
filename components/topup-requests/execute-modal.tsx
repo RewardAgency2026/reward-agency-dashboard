@@ -106,12 +106,19 @@ export function ExecuteModal({ request, onSuccess }: Props) {
 
             {/* Fee preview */}
             <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-gray-600">
                   Supplier fee ({supplierFeeRate}%)
-                  {request.supplier_name && <span className="ml-1 text-gray-400">— {request.supplier_name}{request.sub_account_name ? ` ${request.sub_account_name}` : ""}</span>}
+                  {request.supplier_name && (
+                    <span className="block text-xs text-gray-400 mt-0.5">
+                      {request.supplier_name}
+                      {request.sub_account_name && (
+                        <span className="block text-gray-400">{request.sub_account_name}</span>
+                      )}
+                    </span>
+                  )}
                 </span>
-                <span className="font-mono text-gray-700">{supplierFeeAmount.toFixed(2)} {request.currency}</span>
+                <span className="font-mono text-gray-700 whitespace-nowrap">{supplierFeeAmount.toFixed(2)} {request.currency}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Your commission ({topUpFeeRate}%)</span>
