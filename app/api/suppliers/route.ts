@@ -21,6 +21,7 @@ export async function GET() {
     allFees,
     paymentSums,
     topupSums,
+    topupFeeSums,
     adAccountCounts,
     withdrawalSums,
     feeRefundSums,
@@ -73,6 +74,17 @@ export async function GET() {
       .where(eq(transactions.type, "topup"))
       .groupBy(ad_accounts.supplier_id),
 
+    // Total supplier_fee_amount on topups per supplier (via ad_accounts join)
+    db
+      .select({
+        supplier_id: ad_accounts.supplier_id,
+        total: sql<string>`COALESCE(SUM(${transactions.supplier_fee_amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(ad_accounts, eq(transactions.ad_account_id, ad_accounts.id))
+      .where(eq(transactions.type, "topup"))
+      .groupBy(ad_accounts.supplier_id),
+
     // Ad account counts per supplier
     db
       .select({
@@ -108,6 +120,7 @@ export async function GET() {
   // Build lookup maps
   const paymentMap = new Map(paymentSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
   const topupMap = new Map(topupSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
+  const topupFeeMap = new Map(topupFeeSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
   const adCountMap = new Map(adAccountCounts.map((r) => [r.supplier_id, r.count]));
   const withdrawalMap = new Map(withdrawalSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
   const feeRefundMap = new Map(feeRefundSums.map((r) => [r.supplier_id, parseFloat(r.total)]));
@@ -140,7 +153,7 @@ export async function GET() {
         kpis: {
           total_payments_sent: totalPayments,
           total_topups: totalTopups,
-          remaining_balance: totalPayments - totalTopups + (withdrawalMap.get(s.id) ?? 0) + (feeRefundMap.get(s.id) ?? 0),
+          remaining_balance: totalPayments - totalTopups - (topupFeeMap.get(s.id) ?? 0) + (withdrawalMap.get(s.id) ?? 0) + (feeRefundMap.get(s.id) ?? 0),
           total_ad_accounts: adCountMap.get(s.id) ?? 0,
           total_sub_accounts: subAccounts.length,
         },
