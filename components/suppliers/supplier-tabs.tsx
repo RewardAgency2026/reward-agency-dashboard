@@ -135,6 +135,7 @@ const TXN_LABEL: Record<string, string> = {
   supplier_payment: "Payment Sent",
   topup: "Top Up",
   ad_account_withdrawal: "Withdrawal",
+  supplier_fee: "Provider Fee",
   supplier_fee_refund: "Provider Fee Refund",
   commission_fee: "Client Commission Fee",
 };
@@ -143,14 +144,25 @@ const TXN_BADGE: Record<string, string> = {
   supplier_payment: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   topup: "bg-blue-50 text-blue-700 border border-blue-200",
   ad_account_withdrawal: "bg-orange-50 text-orange-700 border border-orange-200",
-  supplier_fee_refund: "bg-orange-50 text-orange-700 border border-orange-200",
+  supplier_fee: "bg-red-50 text-red-700 border border-red-200",
+  supplier_fee_refund: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   commission_fee: "bg-orange-50 text-orange-700 border border-orange-200",
 };
+
+// Types where amount is a credit (positive) to the supplier balance
+const SUPPLIER_CREDIT_TYPES = new Set(["supplier_payment", "supplier_fee_refund", "ad_account_withdrawal"]);
+
+function getSignedAmount(r: SupplierTxnRow): string {
+  const amt = parseFloat(r.amount).toFixed(2);
+  if (SUPPLIER_CREDIT_TYPES.has(r.type)) return `+${amt}`;
+  if (r.type === "supplier_fee" || r.type === "topup") return `-${amt}`;
+  return amt;
+}
 
 function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string, to: string) {
   const safeName = supplierName.replace(/\s+/g, "_").toLowerCase();
   const filename = `supplier_${safeName}_transactions_${from}_${to}.csv`;
-  const header = "Date,Type,Client Code,Client Name,Ad Account,Sub-Account,Platform,Amount,Currency,Provider Fee,Method,Reference,Bank Fees,Description";
+  const header = "Date,Type,Client Code,Client Name,Ad Account,Sub-Account,Platform,Amount,Currency,Method,Reference,Bank Fees,Description";
   const lines = rows.map((r) => [
     new Date(r.created_at).toLocaleDateString("en-GB"),
     TXN_LABEL[r.type] ?? r.type,
@@ -159,9 +171,8 @@ function downloadCsv(rows: SupplierTxnRow[], supplierName: string, from: string,
     r.ad_account_name ?? "",
     r.sub_account_name ?? "",
     r.ad_account_platform ?? "",
-    parseFloat(r.amount).toFixed(2),
+    getSignedAmount(r),
     r.currency,
-    r.supplier_fee_amount ? parseFloat(r.supplier_fee_amount).toFixed(2) : "",
     r.payment_method ?? "",
     r.reference ?? "",
     r.bank_fees ? parseFloat(r.bank_fees).toFixed(2) : "",
@@ -323,9 +334,13 @@ function SupplierTransactionsTab({ supplierId, supplierName }: { supplierId: str
                     )}
                   </td>
                   <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
-                    <span className={r.type === "supplier_payment" ? "text-emerald-700" : "text-gray-900"}>
-                      {parseFloat(r.amount).toFixed(2)} {r.currency}
-                    </span>
+                    {SUPPLIER_CREDIT_TYPES.has(r.type) ? (
+                      <span className="text-emerald-700">+{parseFloat(r.amount).toFixed(2)} {r.currency}</span>
+                    ) : r.type === "supplier_fee" || r.type === "topup" ? (
+                      <span className="text-red-600">-{parseFloat(r.amount).toFixed(2)} {r.currency}</span>
+                    ) : (
+                      <span className="text-gray-900">{parseFloat(r.amount).toFixed(2)} {r.currency}</span>
+                    )}
                   </td>
                 </tr>
               ))}

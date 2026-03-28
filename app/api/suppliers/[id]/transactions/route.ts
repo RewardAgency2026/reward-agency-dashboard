@@ -101,13 +101,13 @@ export async function GET(
   };
 
   const unified: UnifiedRow[] = [
-    ...txnRows.map((r) => {
+    ...txnRows.flatMap((r) => {
       // Build enriched description with sub-account and fee rate
       const feeRate = parseFloat(r.supplier_fee_rate_snapshot ?? "0");
       const subPart = r.sub_account_name ? ` (${r.sub_account_name}${feeRate > 0 ? ` · ${feeRate}%` : ""})` : "";
       const enrichedDesc = r.ad_account_name ? `${r.ad_account_name}${subPart}` : (r.description ?? null);
 
-      return {
+      const mainRow: UnifiedRow = {
         id: r.id,
         type: r.type,
         amount: r.amount,
@@ -126,6 +126,36 @@ export async function GET(
         bank_fees_note: null,
         status: null,
       };
+
+      const rows: UnifiedRow[] = [mainRow];
+
+      // For topup rows with a supplier fee, inject a synthetic fee line
+      if (r.type === "topup" && r.supplier_fee_amount && parseFloat(r.supplier_fee_amount) > 0) {
+        const feeDesc = feeRate > 0
+          ? `Provider fee ${feeRate}% — ${enrichedDesc ?? r.ad_account_name ?? ""}`
+          : `Provider fee — ${enrichedDesc ?? r.ad_account_name ?? ""}`;
+        rows.push({
+          id: `${r.id}_fee`,
+          type: "supplier_fee",
+          amount: r.supplier_fee_amount,
+          currency: r.currency,
+          description: feeDesc,
+          created_at: r.created_at.toISOString(),
+          ad_account_name: r.ad_account_name,
+          ad_account_platform: r.ad_account_platform,
+          sub_account_name: r.sub_account_name,
+          client_name: r.client_name,
+          client_code: r.client_code,
+          supplier_fee_amount: null,
+          payment_method: null,
+          reference: null,
+          bank_fees: null,
+          bank_fees_note: null,
+          status: null,
+        });
+      }
+
+      return rows;
     }),
     ...paymentRows.map((p) => ({
       id: p.id,
