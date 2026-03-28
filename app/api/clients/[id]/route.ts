@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, affiliates, transactions, ad_accounts, users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne } from "drizzle-orm";
 import { z } from "zod";
 import { calculateWalletBalance } from "@/lib/balance";
 import { logAudit } from "@/lib/audit";
@@ -82,7 +82,7 @@ export async function GET(
     })
     .from(transactions)
     .leftJoin(users, eq(transactions.created_by, users.id))
-    .where(eq(transactions.client_id, params.id))
+    .where(and(eq(transactions.client_id, params.id), ne(transactions.type, "supplier_fee_refund")))
     .orderBy(desc(transactions.created_at));
 
   // Ad accounts list
